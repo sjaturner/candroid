@@ -1,0 +1,9 @@
+.vs/*
+Debug/*
+Release/*
+*.exe
+ogltest
+rawdraw
+rawdraw_ogl
+examples/fontsize
+examples/fontsize_ogl

@@ -1,0 +1,213 @@
+    1  sudo apt install openjdk-11-jdk-headless adb
+    2  df
+    3  sudo apt update
+    4  sudo apt grade
+    5  sudo apt upgrade
+    6  ls -lrt ~/Downloads/
+    7  ls -lrt ~/Downloads/commandlinetools-linux-6609375_latest.zip 
+    8  unzip -t ~/Downloads/commandlinetools-linux-6609375_latest.zip
+    9  unzip -t ~/Downloads/commandlinetools-linux-6609375_latest.zip
+   10  mkdir ~/android
+   11  cd ~/android
+   12  unzip ~/Downloads/commandlinetools-linux-6609375_latest.zip 
+   13  vi tools/lib/README 
+   14  ls -l
+   15  ls -l tools/
+   16  ls -l tools/bin/
+   17  ./tools/bin/sdkmanager 
+   18  ./tools/bin/sdkmanager --version
+   19  ./tools/bin/sdkmanager --list
+   20  ./tools/bin/sdkmanager --list 
+   21  ./tools/bin/sdkmanager --list 
+   22  ls tools/
+   23  history 
+   24  pwd
+   25  cd ..
+   26  mv android/ android-sdk-tools
+   27  md5sum ~/Downloads/commandlinetools-linux-6609375_latest.zip 
+   28  sha256sum ~/Downloads/commandlinetools-linux-6609375_latest.zip 
+   29  pwd
+   30  ls -lrt
+   31  cd android-sdk-tools/tools/
+   32  ls -lrt
+   33  cd bin/
+   34  ls -lrt
+   35  ./sdkmanager 
+   36  ls -lrt
+   37  cd ..
+   38  ls -lrt
+   39  cd ..
+   40  ls -lrt
+   41  cd ..
+   42  ls -lrt
+   43  ls -lrt
+   44  mkdir -p cmdline-tools/latest
+   45  mv android-sdk-tools/tools/* cmdline-tools/latest/
+   46  cmdline-tools/latest/bin/sdkmanager 
+   47  cmdline-tools/latest/bin/sdkmanager --list
+   48  cmdline-tools/latest/bin/sdkmanager --list | less
+   49  ls -l cmdline-tools/
+   50  ls -l cmdline-tools/latest/
+   51  cmdline-tools/latest/bin/sdkmanager --list | grep -w 24
+   52  cmdline-tools/latest/bin/sdkmanager --list | grep -w NDL
+   53  cmdline-tools/latest/bin/sdkmanager --list | grep -w NDK
+   54  cmdline-tools/latest/bin/sdkmanager --help
+   55  cmdline-tools/latest/bin/sdkmanager --install android-24
+   56  cmdline-tools/latest/bin/sdkmanager --install 'packages;android-24'
+   57  cmdline-tools/latest/bin/sdkmanager --help
+   58  cmdline-tools/latest/bin/sdkmanager --list | grep -w 24
+   59  cmdline-tools/latest/bin/sdkmanager --install 'platforms;android-24'
+   60  cmdline-tools/latest/bin/sdkmanager --install NDK
+   61  cmdline-tools/latest/bin/sdkmanager --list | grep -w NDK
+   62  cmdline-tools/latest/bin/sdkmanager --install ndk-bundle
+   63  pwd
+   64  ls -lrt
+   65  pwd
+   66  pwd
+   67  ls android-sdk-tools/
+   68  ls android-sdk-tools/tools/
+   69  rm -rf android-sdk-tools/
+   70  ls ndk-bundle/
+   71  ls cmdline-tools/
+   72  ls ndk-bundle/
+   73  sudo updatedb
+   74  ls -l ndk-bundle/
+   75  ls -lrt
+   76  mkdir android
+   77  locate -ri android.*24
+   78  mv platforms/ ndk-bundle/ android/
+   79  mv cmdline-tools/ android/
+   80  cd android/
+   81  ls -lrt
+   82  gh list
+   83  ./tools/bin/sdkmanager --list 
+   84  ./cmdline-tools/latest/bin/sdkmanager --list
+   85  ls -lrt
+   86  pwd
+   87  cd 
+   88  cd play/
+   89  https://github.com/cnlohr/rawdrawandroid.git
+   90  git clone https://github.com/cnlohr/rawdrawandroid.git
+   91  cd rawdrawandroid/
+   92  ls -lrt
+   93  ls docker/
+   94  cd ..
+   95  ls -lrt
+   96  rm -rf rawdrawandroid/
+   97  git clone --recurse https://github.com/cnlohr/rawdrawandroid.git
+   98  cd rawdrawandroid/
+   99  ls -lrt
+  100  ls rawdraw/
+  101  ls rawdraw/CNFGCocoaDriver.m 
+  102  vi rawdraw/CNFGCocoaDriver.m
+  103  ls -lrt
+  104  vi M
+  105  vi Makefile 
+  106  sudo updatedb
+  107  locate aarch64-linux-android
+  108  vi Makefile 
+  109  ls -l /home/simont/android/
+  110  vi Makefile 
+  111  git diff
+  112  vi Makefile 
+  113  :q
+  114  make -n keystore
+  115  ls -l \$HOME/android/
+  116  ls -l $HOME/android/
+  117  ls -l \$HOME/android/ndk-bundle/
+  118  ls -l $HOME/android/ndk-bundle/
+  119  vi M
+  120  vi Makefile 
+  121  ls -l $HOME/android/
+  122  ls -l $HOME/android/platforms/
+  123  ls -l \$HOME/android/platforms/android-24/
+  124  ls -l $HOME/android/platforms/android-24/
+  125  vi
+  126  locate android-sdk
+  127  ls -l /usr/lib/android-sdk
+  128  date
+  129  vi Makefile 
+  130  history 
+  131  locate -ri android.*24
+  132  vi Makefile 
+  133  locate -ri android.*24 | grep build-t
+  134  locate -ri android.*24 | grep clang
+  135  vi Makefile 
+  136  vi Makefile 
+  137  vi Makefile 
+  138  make -n keystore
+  139  vi Makefile 
+  140  git difftool 
+  141  git difftool 
+  142  git difftool 
+  143  make -n ANDROID_HOME=/home/simont/android keystore
+  144  vi Makefile 
+  145  vi Makefile 
+  146  make -n ANDROID_HOME=/home/simont/android/ndk-bundle/ keystore
+  147  vi Makefile 
+  148  locate aapt
+  149  vi Makefile 
+  150  git diff
+  151  pwd
+  152  cd
+  153  mv android/ /tmp/
+  154  git diff
+  155  pwd
+  156  sudo apt-get install syncthing
+  157  syncthing 
+  158  syncthing &
+  159  reset
+  160  ps ax | grep sync
+  161  pwd
+  162  cd play/rawdrawandroid/
+  163  ls -lrt
+  164  make keystore
+  165  make
+  166  vi
+  167  make
+  168  make push run 
+  169  make push run 
+  170  grep -rw manifest *
+  171  vi AndroidManifest.xml 
+  172  make push run 
+  173  make push run 
+  174  make clean 
+  175  make push run 
+  176  grep -rw cnfgtest .
+  177  vi ./Sources/res/values/strings.xml
+  178  make clean 
+  179  make push run 
+  180  make clean 
+  181  make push run 
+  182  ls -lrt
+  183  history 
+  184  find . -name '*.c'
+  185  vi $(find . -name '*.c'
+  186  vi $(find . -name '*.c')
+  187  git diff
+  188  ls -lrt ~
+  189  ls -lrt ~/Android/
+  190  ls -lrt ~/android-studio/
+  191  ls -lrt ~/android-studio/ 
+  192  ls -lrt ~/Android/
+  193  ls -lrt ~/Android/Sdk/
+  194  ls -lrt ~/Android/Sdk/
+  195  ls -lrt
+  196  git diff
+  197  ls -lt
+  198  cat LICENSE 
+  199  find . -name LICENCE
+  200  find . -name LIC*
+  201  find . -name LIC*
+  202  vi $( find . -name LIC* )
+  203  ls -lrt
+  204  ls docker/
+  205  ls docker/README.md 
+  206  vi docker/README.md
+  207  ls -lrt
+  208  ls -lrt ~/android-studio/
+  209  mv ~/android-studio/ /tmp/
+  210  sync
+  211  history 
+  212  history | less
+  213  history > bunk
