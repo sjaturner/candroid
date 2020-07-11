@@ -32,11 +32,111 @@ void HandleDestroy()
    exit(10);
 }
 
-uint32_t backdrop[256 * 256];
+uint32_t *backdrop;
+
+#define SQ(X) ((X) * (X))
+int ring_elems;
+
+struct target
+{
+   int threshold;
+   uint32_t colour;
+   int score;
+} 
+rings[0x40];
+
+enum
+{
+   BK = 0x000000,
+   WT = 0xffffff,
+   BE = 0x0000ff,
+   RD = 0xff0000,
+   YO = 0xffff00,
+};
+
+void init_target(int radius)
+{
+   struct
+   {
+      uint32_t outer;
+      uint32_t inner;
+   }
+   colours[] = 
+   {
+      {0, 0,}, /* Unused. */
+      {BK, WT,},
+      {BK, WT,},
+      {BK, BK,},
+      {WT, BK,},
+      {BK, BE,},
+      {BK, BE,},
+      {BK, RD,},
+      {BK, RD,},
+      {BK, YO,},
+      {BK, YO,},
+   };
+
+   for(int score = 1; score <= 10; ++score)
+   {
+      float outer_radius = radius - radius * (score - 1) / 10;
+      float inner_radius = outer_radius - radius * 0.01;
+
+      rings[ring_elems].threshold = SQ(outer_radius);
+      rings[ring_elems].colour = colours[score].outer;
+      rings[ring_elems].score = score;
+      ++ring_elems;
+
+      rings[ring_elems].threshold = SQ(inner_radius);
+      rings[ring_elems].colour = colours[score].inner;
+      rings[ring_elems].score = score;
+      ++ring_elems;
+   }
+}
+
+int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
+{
+   int dx = x - cx;
+   int dy = y - cy;
+   int square_sum = SQ(dx) + SQ(dy);
+
+   *colour = 0;
+
+   if(square_sum <= rings[0].threshold)
+   {
+      for(int index = ring_elems - 1; index >= 0; --index)
+      {
+         if(square_sum <= rings[index].threshold)
+         {
+            *colour = rings[index].colour;
+            return 1;
+         }
+      }
+   }
+
+   return 0;
+}
 
 uint32_t *make_backdrop(int screenx, int screeny)
 {
-   return 0;
+   uint32_t size = screenx * screeny * sizeof(uint32_t);
+   uint32_t *ret = memset(calloc(1, size), 0xff, size);
+
+   init_target(100);
+
+   for(int y = 0; y < screeny; y++)
+   {
+      for(int x = 0; x < screenx; x++)
+      {
+         uint32_t colour = 0;
+
+         if(plot_colour(screenx / 2, screeny / 4, x, y, &colour))
+         {
+            ret[x + y * screenx] = colour;
+         }
+      }
+   }
+
+   return ret;
 }
 
 int main()
@@ -55,19 +155,7 @@ int main()
 
    CNFGGetDimensions(&screenx, &screeny);
 
-   for(int y = 0; y < 256; y++)
-   {
-      for(int x = 0; x < 256; x++)
-      {
-         int dx = x - screenx / 2;
-         int dy = y - screeny / 4;
-         
-         if(dx * dx + dy * dy < 1000)
-         {
-            backdrop[x + y * 256] = rand();
-         }
-      }
-   }
+   backdrop = make_backdrop(screenx, screeny);
 
    while(1)
    {
@@ -104,24 +192,27 @@ int main()
          }
       }
 
-      // Green triangles
-      CNFGPenX = 0;
-      CNFGPenY = 0;
-
-      for(int i = 0; i < 400; i++)
+      if(0)
       {
-         RDPoint pp[3];
-         CNFGColor(0x00FF00);
-         pp[0].x = (short)(50 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
-         pp[0].y = (short)(50 * cos((float)(i + iframeno) * .01) + (i / 20) * 20);
-         pp[1].x = (short)(20 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
-         pp[1].y = (short)(50 * cos((float)(i + iframeno) * .01) + (i / 20) * 20);
-         pp[2].x = (short)(10 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
-         pp[2].y = (short)(30 * cos((float)(i + iframeno) * .01) + (i / 20) * 20);
-         CNFGTackPoly(pp, 3);
+         // Green triangles
+         CNFGPenX = 0;
+         CNFGPenY = 0;
+
+         for(int i = 0; i < 400; i++)
+         {
+            RDPoint pp[3];
+            CNFGColor(0x00FF00);
+            pp[0].x = (short)(50 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
+            pp[0].y = (short)(50 * cos((float)(i + iframeno) * .01) + (i / 20) * 20);
+            pp[1].x = (short)(20 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
+            pp[1].y = (short)(50 * cos((float)(i + iframeno) * .01) + (i / 20) * 20);
+            pp[2].x = (short)(10 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
+            pp[2].y = (short)(30 * cos((float)(i + iframeno) * .01) + (i / 20) * 20);
+            CNFGTackPoly(pp, 3);
+         }
       }
 
-      CNFGUpdateScreenWithBitmap(backdrop, 256, 256);
+      CNFGUpdateScreenWithBitmap(backdrop, screenx, screeny);
 
       frames++;
       CNFGSwapBuffers();

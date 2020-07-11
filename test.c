@@ -348,7 +348,7 @@ int main()
 
       if(0)
       {
-         for(i = 0; i < 400; i++)
+         for(int i = 0; i < 400; i++)
          {
             RDPoint pp[3];
             CNFGColor(0x00FF00);
@@ -361,9 +361,8 @@ int main()
             CNFGTackPoly(pp, 3);
          }
 
-         int x, y;
-         for(y = 0; y < 256; y++)
-            for(x = 0; x < 256; x++)
+         for(int y = 0; y < 256; y++)
+            for(int x = 0; x < 256; x++)
                randomtexturedata[x + y * 256] = rand();
 
          CNFGUpdateScreenWithBitmap(randomtexturedata, 256, 256);

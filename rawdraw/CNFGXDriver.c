@@ -409,28 +409,28 @@ void CNFGHandleInput()
 
 void CNFGUpdateScreenWithBitmap( uint32_t * data, int w, int h )
 {
-	static XImage *xi;
-	static int depth;
-	static int lw, lh;
+   static XImage *xi;
+   static int depth;
+   static int lw, lh;
 
-	if( !xi )
-	{
-		int screen = DefaultScreen(CNFGDisplay);
-		depth = DefaultDepth(CNFGDisplay, screen)/8;
+   if( !xi )
+   {
+      int screen = DefaultScreen(CNFGDisplay);
+      depth = DefaultDepth(CNFGDisplay, screen)/8;
 //		xi = XCreateImage(CNFGDisplay, DefaultVisual( CNFGDisplay, DefaultScreen(CNFGDisplay) ), depth*8, ZPixmap, 0, (char*)data, w, h, 32, w*4 );
 //		lw = w;
 //		lh = h;
-	}
+   }
 
-	if( lw != w || lh != h )
-	{
-		if( xi ) free( xi );
-		xi = XCreateImage(CNFGDisplay, CNFGVisual, depth*8, ZPixmap, 0, (char*)data, w, h, 32, w*4 );
-		lw = w;
-		lh = h;
-	}
+   if( lw != w || lh != h )
+   {
+      if( xi ) free( xi );
+      xi = XCreateImage(CNFGDisplay, CNFGVisual, depth*8, ZPixmap, 0, (char*)data, w, h, 32, w*4 );
+      lw = w;
+      lh = h;
+   }
 
-	XPutImage(CNFGDisplay, CNFGWindow, CNFGWindowGC, xi, 0, 0, 0, 0, w, h );
+   XPutImage(CNFGDisplay, CNFGPixmap, CNFGGC, xi, 0, 0, 0, 0, w, h );
 }
 
 
