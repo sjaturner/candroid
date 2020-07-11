@@ -116,12 +116,14 @@ int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
    return 0;
 }
 
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 uint32_t *make_backdrop(int screenx, int screeny)
 {
    uint32_t size = screenx * screeny * sizeof(uint32_t);
    uint32_t *ret = memset(calloc(1, size), 0xff, size);
+   int radius = MIN(screenx / 2, screeny / 4) * 3 / 4;
 
-   init_target(100);
+   init_target(radius);
 
    for(int y = 0; y < screeny; y++)
    {
@@ -129,7 +131,11 @@ uint32_t *make_backdrop(int screenx, int screeny)
       {
          uint32_t colour = 0;
 
-         if(plot_colour(screenx / 2, screeny / 4, x, y, &colour))
+         if(plot_colour(screenx / 2, radius * 4 / 3, x, y, &colour))
+         {
+            ret[x + y * screenx] = colour;
+         }
+         else if(plot_colour(screenx / 2, screeny - radius * 5 / 3, x, y, &colour))
          {
             ret[x + y * screenx] = colour;
          }
