@@ -1,10 +1,17 @@
 //Copyright (c) 2011-2020 <>< Charles Lohr - Under the MIT/x11 or NewBSD License you choose.
 // NO WARRANTY! NO GUARANTEE OF SUPPORT! USE AT YOUR OWN RISK
 
+#include <arpa/inet.h>
+#include <math.h>
+#include <netinet/in.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 #include "os_generic.h"
 #include <GLES3/gl3.h>
 #include <asset_manager.h>
@@ -17,7 +24,46 @@
 #define CNFG3D
 #include "CNFG.h"
 
-float mountainangle;
+void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
+{
+   int sock = -1;
+   struct sockaddr_in server = {
+      .sin_family = AF_INET,
+      .sin_port = htons(port),
+      .sin_addr = inet_addr(addr),
+   };
+
+   if((sock = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)
+   {
+      /* Send the message in buf to the server */
+      if(sendto(sock, data, len, 0, (struct sockaddr *)&server, sizeof(server)) < 0)
+      {
+         /* Muttley, do something! */
+      }
+
+      close(sock);
+   }
+   else
+   {
+      /* Muttley, do something! */
+   }
+}
+
+int debug(char *addr, uint32_t port, const char *fmt, ...)
+{
+   int size = 0;
+   va_list ap;
+   char buf[0x80] = { };
+
+   va_start(ap, fmt);
+   size = vsnprintf(buf, (int)sizeof buf - 1, fmt, ap);
+   va_end(ap);
+
+   udp_block(addr, port, buf, size);
+
+   return size;
+}
+
 float mountainoffsetx;
 float mountainoffsety;
 
@@ -36,9 +82,6 @@ void SetupIMU()
    printf("setEvent Rate: %d\n", ASensorEventQueue_setEventRate(aeq, as, 10000));
 }
 
-float accx, accy, accz;
-int accs;
-
 void AccCheck()
 {
    ASensorEvent evt;
@@ -47,19 +90,12 @@ void AccCheck()
       ssize_t s = ASensorEventQueue_getEvents(aeq, &evt, 1);
       if(s <= 0)
          break;
-      accx = evt.vector.v[0];
-      accy = evt.vector.v[1];
-      accz = evt.vector.v[2];
-      mountainangle   -= accz;
-      mountainoffsety += accy;
-      mountainoffsetx += accx;
-      accs++;
+      evt.vector.v[0];
+      evt.vector.v[1];
+      evt.vector.v[2];
    }
    while(1);
 }
-
-unsigned frames = 0;
-unsigned long iframeno = 0;
 
 void AndroidDisplayKeyboard(int pShow);
 
@@ -77,7 +113,7 @@ void HandleKey(int keycode, int bDown)
 {
    lastkey = keycode;
    lastkeydown = bDown;
-   if(keycode == 10 && !bDown)
+   if(0 && keycode == 10 && !bDown)
    {
       keyboard_up = 0;
       AndroidDisplayKeyboard(keyboard_up);
@@ -95,7 +131,7 @@ void HandleButton(int x, int y, int button, int bDown)
    lastbuttonx = x;
    lastbuttony = y;
 
-   if(bDown)
+   if(0 && bDown)
    {
       keyboard_up = !keyboard_up;
       AndroidDisplayKeyboard(keyboard_up);
@@ -116,119 +152,6 @@ float Heightmap[HMX * HMY];
 
 extern struct android_app *gapp;
 
-void DrawHeightmap()
-{
-   int x, y;
-
-   mountainangle += .2;
-   if(mountainangle < 0)
-      mountainangle += 360;
-   if(mountainangle > 360)
-      mountainangle -= 360;
-
-   mountainoffsety = mountainoffsety - ((mountainoffsety - 100) * .1);
-
-   float eye[3] = { (float)sin(mountainangle * (3.14159 / 180.0)) * 30 * sin(mountainoffsety / 100.), (float)cos(mountainangle * (3.14159 / 180.0)) * 30 * sin(mountainoffsety / 100.), 30 * cos(mountainoffsety / 100.) };
-   float at[3] = { 0, 0, 0 };
-   float up[3] = { 0, 0, 1 };
-
-   tdSetViewport(-1, -1, 1, 1, screenx, screeny);
-
-   tdMode(tdPROJECTION);
-   tdIdentity(gSMatrix);
-   tdPerspective(30, ((float)screenx) / ((float)screeny), .1, 200., gSMatrix);
-
-   tdMode(tdMODELVIEW);
-   tdIdentity(gSMatrix);
-   tdTranslate(gSMatrix, 0, 0, -40);
-   tdLookAt(gSMatrix, eye, at, up);
-
-   float scale = 60. / HMX;
-
-   for(x = 0; x < HMX - 1; x++)
-      for(y = 0; y < HMY - 1; y++)
-      {
-         float tx = x - HMX / 2;
-         float ty = y - HMY / 2;
-         float pta[3];
-         float ptb[3];
-         float ptc[3];
-         float ptd[3];
-
-         float normal[3];
-         float lightdir[3] = { .6, -.6, 1 };
-         float tmp1[3];
-         float tmp2[3];
-
-         RDPoint pto[6];
-
-         pta[0] = (tx + 0) * scale;
-         pta[1] = (ty + 0) * scale;
-         pta[2] = Heightmap[(x + 0) + (y + 0) * HMX] * scale;
-         ptb[0] = (tx + 1) * scale;
-         ptb[1] = (ty + 0) * scale;
-         ptb[2] = Heightmap[(x + 1) + (y + 0) * HMX] * scale;
-         ptc[0] = (tx + 0) * scale;
-         ptc[1] = (ty + 1) * scale;
-         ptc[2] = Heightmap[(x + 0) + (y + 1) * HMX] * scale;
-         ptd[0] = (tx + 1) * scale;
-         ptd[1] = (ty + 1) * scale;
-         ptd[2] = Heightmap[(x + 1) + (y + 1) * HMX] * scale;
-
-         tdPSub(pta, ptb, tmp2);
-         tdPSub(ptc, ptb, tmp1);
-         tdCross(tmp1, tmp2, normal);
-         tdNormalizeSelf(normal);
-
-         tdFinalPoint(pta, pta);
-         tdFinalPoint(ptb, ptb);
-         tdFinalPoint(ptc, ptc);
-         tdFinalPoint(ptd, ptd);
-
-         if(pta[2] >= 1.0)
-            continue;
-         if(ptb[2] >= 1.0)
-            continue;
-         if(ptc[2] >= 1.0)
-            continue;
-         if(ptd[2] >= 1.0)
-            continue;
-
-         if(pta[2] < 0)
-            continue;
-         if(ptb[2] < 0)
-            continue;
-         if(ptc[2] < 0)
-            continue;
-         if(ptd[2] < 0)
-            continue;
-
-         pto[0].x = pta[0];
-         pto[0].y = pta[1];
-         pto[1].x = ptb[0];
-         pto[1].y = ptb[1];
-         pto[2].x = ptd[0];
-         pto[2].y = ptd[1];
-
-         pto[3].x = ptc[0];
-         pto[3].y = ptc[1];
-         pto[4].x = ptd[0];
-         pto[4].y = ptd[1];
-         pto[5].x = pta[0];
-         pto[5].y = pta[1];
-
-         float bright = tdDot(normal, lightdir);
-         if(bright < 0)
-            bright = 0;
-         CNFGColor((int)(bright * 90));
-
-         CNFGTackSegment(pta[0], pta[1], ptb[0], ptb[1]);
-         CNFGTackSegment(pta[0], pta[1], ptc[0], ptc[1]);
-         CNFGTackSegment(ptb[0], ptb[1], ptc[0], ptc[1]);
-
-      }
-}
-
 void HandleDestroy()
 {
    printf("Destroying\n");
@@ -247,139 +170,164 @@ void HandleResume()
    suspended = 0;
 }
 
-uint32_t randomtexturedata[256 * 256];
+uint32_t *backdrop;
+
+#define SQ(X) ((X) * (X))
+int ring_elems;
+
+enum
+{
+   NELEM_RINGS = 0x40,
+};
+
+struct target
+{
+   int threshold;
+   uint32_t colour;
+   int score;
+}
+rings[NELEM_RINGS];
+
+enum
+{
+   BK = 0x000000,
+   WT = 0xffffff,
+   BE = 0xff0000,
+   RD = 0x0000ff,
+   YO = 0x00ffff,
+};
+
+void init_target(int radius)
+{
+   struct
+   {
+      uint32_t outer;
+      uint32_t inner;
+   }
+   colours[] = {
+      {0, 0,}, /* Unused. */
+      {BK, WT,},
+      {BK, WT,},
+      {BK, BK,},
+      {WT, BK,},
+      {BK, BE,},
+      {BK, BE,},
+      {BK, RD,},
+      {BK, RD,},
+      {BK, YO,},
+      {BK, YO,},
+   };
+
+   for(int score = 1; score <= 10; ++score)
+   {
+      float outer_radius = radius - radius * (score - 1) / 10;
+      float inner_radius = outer_radius - radius * 0.01;
+
+      rings[ring_elems].threshold = SQ(outer_radius);
+      rings[ring_elems].colour = colours[score].outer;
+      rings[ring_elems].score = score;
+      ++ring_elems;
+
+      rings[ring_elems].threshold = SQ(inner_radius);
+      rings[ring_elems].colour = colours[score].inner;
+      rings[ring_elems].score = score;
+      ++ring_elems;
+
+      if(ring_elems >= NELEM_RINGS)
+      {
+         break;
+      }
+   }
+}
+
+int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
+{
+   int dx = x - cx;
+   int dy = y - cy;
+   int square_sum = SQ(dx) + SQ(dy);
+
+   *colour = 0;
+
+   if(square_sum <= rings[0].threshold)
+   {
+      for(int index = ring_elems - 1; index >= 0; --index)
+      {
+         if(square_sum <= rings[index].threshold)
+         {
+            *colour = rings[index].colour;
+            return 1;
+         }
+      }
+   }
+
+   return 0;
+}
+
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+uint32_t *make_backdrop(int screenx, int screeny)
+{
+   uint32_t size = screenx * screeny * sizeof(uint32_t);
+   uint32_t *ret = memset(calloc(1, size), 0xff, size);
+   int radius = MIN(screenx / 2, screeny / 4) * 3 / 4;
+
+   init_target(radius);
+
+   for(int y = 0; y < screeny; y++)
+   {
+      for(int x = 0; x < screenx; x++)
+      {
+         uint32_t colour = 0;
+
+         if(plot_colour(screenx / 2, radius * 4 / 3, x, y, &colour))
+         {
+            ret[x + y * screenx] = colour;
+         }
+         else if(plot_colour(screenx / 2, screeny - radius * 5 / 3, x, y, &colour))
+         {
+            ret[x + y * screenx] = colour;
+         }
+      }
+   }
+
+   return ret;
+}
 
 int main()
 {
-   int x, y;
    double ThisTime;
-   double LastFPSTime = OGGetAbsoluteTime();
-   int linesegs = 0;
+   double LastFrameTime = OGGetAbsoluteTime();
+   double SecToWait;
+   short screenx, screeny;
 
-   CNFGBGColor = 0x400000;
+   CNFGBGColor = 0x800000;
    CNFGDialogColor = 0x444444;
-   CNFGSetupFullscreen("Test Bench", 0);
+   CNFGSetup("Test Bench", 270, 480);
 
-   if(0)
-   {
-      for(x = 0; x < HMX; x++)
-         for(y = 0; y < HMY; y++)
-         {
-            Heightmap[x + y * HMX] = tdPerlin2D(x, y) * 8.;
-         }
-   }
+   CNFGGetDimensions(&screenx, &screeny);
 
-   const char *assettext = "Not Found";
-   AAsset *file = AAssetManager_open(gapp->activity->assetManager, "asset.txt", AASSET_MODE_BUFFER);
-   if(file)
-   {
-      size_t fileLength = AAsset_getLength(file);
-      char *temp = malloc(fileLength + 1);
-      memcpy(temp, AAsset_getBuffer(file), fileLength);
-      temp[fileLength] = 0;
-      assettext = temp;
-   }
-   SetupIMU();
+   backdrop = make_backdrop(screenx, screeny);
+
+   debug("192.168.1.104", 23456, "hello\n");
 
    while(1)
    {
-      int i, pos;
-      iframeno++;
-
       CNFGHandleInput();
-      AccCheck();
-
-      if(suspended)
-      {
-         usleep(50000);
-         continue;
-      }
 
       CNFGClearFrame();
       CNFGColor(0xFFFFFF);
-      CNFGGetDimensions(&screenx, &screeny);
 
-      // Mesh in background
-      glLineWidth(9.0);
-      if(0)
-      {
-         DrawHeightmap();
-      }
-      CNFGPenX = 0;
-      CNFGPenY = 400;
-      CNFGColor(0xffffff);
-      CNFGDrawText(assettext, 15);
-      CNFGFlushRender();
+      CNFGUpdateScreenWithBitmap(backdrop, screenx, screeny);
 
-      CNFGPenX = 0;
-      CNFGPenY = 480;
-      char st[50];
-      sprintf(st, "%dx%d %d %d %d %d %d %d\n%d %d\n%5.2f %5.2f %5.2f %d", screenx, screeny, lastbuttonx, lastbuttony, lastmotionx, lastmotiony, lastkey, lastkeydown, lastbid, lastmask, accx, accy, accz, accs);
-      CNFGDrawText(st, 10);
-      glLineWidth(2.0);
+      CNFGDrawBox(100, 100, 105, 105);
 
-
-      // Square behind text
-      CNFGDrawBox(600, 0, 950, 350);
-
-      CNFGPenX = 10;
-      CNFGPenY = 10;
-
-      // Text
-      pos = 0;
-      CNFGColor(0xffffff);
-      for(i = 0; i < 1; i++)
-      {
-         int c;
-         char tw[2] = { 0, 0 };
-         for(c = 0; c < 256; c++)
-         {
-            tw[0] = c;
-
-            CNFGPenX = (c % 16) * 20 + 606;
-            CNFGPenY = (c / 16) * 20 + 5;
-            CNFGDrawText(tw, 4);
-         }
-      }
-
-      // Green triangles
-      CNFGPenX = 0;
-      CNFGPenY = 0;
-
-      if(0)
-      {
-         for(int i = 0; i < 400; i++)
-         {
-            RDPoint pp[3];
-            CNFGColor(0x00FF00);
-            pp[0].x = (short)(50 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
-            pp[0].y = (short)(50 * cos((float)(i + iframeno) * .01) + (i / 20) * 20) + 700;
-            pp[1].x = (short)(20 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
-            pp[1].y = (short)(50 * cos((float)(i + iframeno) * .01) + (i / 20) * 20) + 700;
-            pp[2].x = (short)(10 * sin((float)(i + iframeno) * .01) + (i % 20) * 30);
-            pp[2].y = (short)(30 * cos((float)(i + iframeno) * .01) + (i / 20) * 20) + 700;
-            CNFGTackPoly(pp, 3);
-         }
-
-         for(int y = 0; y < 256; y++)
-            for(int x = 0; x < 256; x++)
-               randomtexturedata[x + y * 256] = rand();
-
-         CNFGUpdateScreenWithBitmap(randomtexturedata, 256, 256);
-      }
-
-      frames++;
-      //On Android, CNFGSwapBuffers must be called, and CNFGUpdateScreenWithBitmap does not have an implied framebuffer swap.
       CNFGSwapBuffers();
 
       ThisTime = OGGetAbsoluteTime();
-      if(ThisTime > LastFPSTime + 1)
-      {
-         printf("FPS: %d\n", frames);
-         frames = 0;
-         linesegs = 0;
-         LastFPSTime += 1;
-      }
+
+      SecToWait = .016 - (ThisTime - LastFrameTime);
+      LastFrameTime += .016;
+      if(SecToWait > 0)
+         OGUSleep((int)(SecToWait * 1000000));
    }
 
    return (0);

@@ -54,9 +54,9 @@ enum
 {
    BK = 0x000000,
    WT = 0xffffff,
-   BE = 0x0000ff,
-   RD = 0xff0000,
-   YO = 0xffff00,
+   BE = 0xff0000,
+   RD = 0x0000ff,
+   YO = 0x00ffff,
 };
 
 void init_target(int radius)
