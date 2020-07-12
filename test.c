@@ -108,22 +108,11 @@ void AccCheck()
 
 void AndroidDisplayKeyboard(int pShow);
 
-int lastbuttonx = 0;
-int lastbuttony = 0;
-int lastmotionx = 0;
-int lastmotiony = 0;
-int lastbid = 0;
-int lastmask = 0;
-int lastkey;
-int lastkeydown;
-
 static int keyboard_up;
 
-void HandleKey(int keycode, int bDown)
+void HandleKey(int keycode, int down)
 {
-   lastkey = keycode;
-   lastkeydown = bDown;
-   if(0 && keycode == 10 && !bDown)
+   if(0 && keycode == 10 && !down)
    {
       keyboard_up = 0;
       AndroidDisplayKeyboard(keyboard_up);
@@ -133,29 +122,22 @@ void HandleKey(int keycode, int bDown)
    {
       AndroidSendToBack(1);
    }                            //Handle Physical Back Button.
-   debug("%s", __FUNCTION__);
+   debug("%s %d %d", __FUNCTION__, keycode, down);
 }
 
-void HandleButton(int x, int y, int button, int bDown)
+void HandleButton(int x, int y, int button, int down)
 {
-   lastbid = button;
-   lastbuttonx = x;
-   lastbuttony = y;
-
-   if(0 && bDown)
+   if(0 && down)
    {
       keyboard_up = !keyboard_up;
       AndroidDisplayKeyboard(keyboard_up);
    }
-   debug("%s", __FUNCTION__);
+   debug("%s %d %d %d %d", __FUNCTION__, x, y, button, down);
 }
 
 void HandleMotion(int x, int y, int mask)
 {
-   lastmask = mask;
-   lastmotionx = x;
-   lastmotiony = y;
-   debug("%s 0x%08x %d %d", __FUNCTION__, lastmask, lastmotionx, lastmotiony);
+   debug("%s %d %d 0x%08x", __FUNCTION__, x, y, mask);
 }
 
 extern struct android_app *gapp;
