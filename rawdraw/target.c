@@ -37,13 +37,18 @@ uint32_t *backdrop;
 #define SQ(X) ((X) * (X))
 int ring_elems;
 
+enum
+{
+   NELEM_RINGS = 0x40,
+};
+
 struct target
 {
    int threshold;
    uint32_t colour;
    int score;
 } 
-rings[0x40];
+rings[NELEM_RINGS];
 
 enum
 {
@@ -90,6 +95,11 @@ void init_target(int radius)
       rings[ring_elems].colour = colours[score].inner;
       rings[ring_elems].score = score;
       ++ring_elems;
+
+      if(ring_elems >= NELEM_RINGS)
+      {
+         break;
+      }
    }
 }
 
@@ -145,7 +155,7 @@ uint32_t *make_backdrop(int screenx, int screeny)
    return ret;
 }
 
-int main()
+int dross()
 {
    double ThisTime;
    double LastFPSTime = OGGetAbsoluteTime();
@@ -171,7 +181,6 @@ int main()
 
       CNFGClearFrame();
       CNFGColor(0xFFFFFF);
-//    CNFGGetDimensions(&screenx, &screeny);
 
       if(0)
       CNFGDrawBox(0, 0, 260, 260);
@@ -236,6 +245,45 @@ int main()
       if(SecToWait > 0)
          OGUSleep((int)(SecToWait * 1000000));
 
+   }
+
+   return (0);
+}
+
+int main()
+{
+   double ThisTime;
+   double LastFrameTime = OGGetAbsoluteTime();
+   double SecToWait;
+   short screenx, screeny;
+
+   CNFGBGColor = 0x800000;
+   CNFGDialogColor = 0x444444;
+   CNFGSetup("Test Bench", 270, 480);
+
+   CNFGGetDimensions(&screenx, &screeny);
+
+   backdrop = make_backdrop(screenx, screeny);
+
+   while(1)
+   {
+      CNFGHandleInput();
+
+      CNFGClearFrame();
+      CNFGColor(0xFFFFFF);
+
+      CNFGUpdateScreenWithBitmap(backdrop, screenx, screeny);
+
+      CNFGDrawBox(100, 100, 105, 105);
+
+      CNFGSwapBuffers();
+
+      ThisTime = OGGetAbsoluteTime();
+
+      SecToWait = .016 - (ThisTime - LastFrameTime);
+      LastFrameTime += .016;
+      if(SecToWait > 0)
+         OGUSleep((int)(SecToWait * 1000000));
    }
 
    return (0);
