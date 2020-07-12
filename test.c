@@ -27,6 +27,10 @@
 
 #define log(...) __android_log_print(ANDROID_LOG_VERBOSE, "spood", __VA_ARGS__)
 
+#define TARGET_IP "192.168.1.104"
+#define TARGET_PORT 23456
+#define debug(...) udp_debug(TARGET_IP, TARGET_PORT, __VA_ARGS__)
+
 void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
 {
    int sock = -1;
@@ -52,7 +56,7 @@ void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
    }
 }
 
-int debug(char *addr, uint32_t port, const char *fmt, ...)
+int udp_debug(char *addr, uint32_t port, const char *fmt, ...)
 {
    int size = 0;
    va_list ap;
@@ -61,8 +65,6 @@ int debug(char *addr, uint32_t port, const char *fmt, ...)
    va_start(ap, fmt);
    size = vsnprintf(buf, (int)sizeof buf - 1, fmt, ap);
    va_end(ap);
-
-   log(buf);
 
    udp_block(addr, port, buf, size);
 
@@ -89,15 +91,17 @@ void SetupIMU()
 
 void AccCheck()
 {
-   ASensorEvent evt;
+   ASensorEvent evt = { };
    do
    {
       ssize_t s = ASensorEventQueue_getEvents(aeq, &evt, 1);
       if(s <= 0)
          break;
+#if 0
       evt.vector.v[0];
       evt.vector.v[1];
       evt.vector.v[2];
+#endif
    }
    while(1);
 }
@@ -110,7 +114,8 @@ int lastmotionx = 0;
 int lastmotiony = 0;
 int lastbid = 0;
 int lastmask = 0;
-int lastkey, lastkeydown;
+int lastkey;
+int lastkeydown;
 
 static int keyboard_up;
 
@@ -128,6 +133,7 @@ void HandleKey(int keycode, int bDown)
    {
       AndroidSendToBack(1);
    }                            //Handle Physical Back Button.
+   debug("%s", __FUNCTION__);
 }
 
 void HandleButton(int x, int y, int button, int bDown)
@@ -141,6 +147,7 @@ void HandleButton(int x, int y, int button, int bDown)
       keyboard_up = !keyboard_up;
       AndroidDisplayKeyboard(keyboard_up);
    }
+   debug("%s", __FUNCTION__);
 }
 
 void HandleMotion(int x, int y, int mask)
@@ -148,12 +155,8 @@ void HandleMotion(int x, int y, int mask)
    lastmask = mask;
    lastmotionx = x;
    lastmotiony = y;
+   debug("%s 0x%08x %d %d", __FUNCTION__, lastmask, lastmotionx, lastmotiony);
 }
-
-#define HMX 162
-#define HMY 162
-short screenx, screeny;
-float Heightmap[HMX * HMY];
 
 extern struct android_app *gapp;
 
@@ -314,7 +317,8 @@ int main()
 
    backdrop = make_backdrop(screenx, screeny);
 
-   debug("192.168.1.104", 23456, "hello\n");
+   debug("hello");
+   debug("hello");
 
    while(1)
    {
