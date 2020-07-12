@@ -31,7 +31,7 @@
 #define TARGET_PORT 23456
 #define debug(...) udp_debug(TARGET_IP, TARGET_PORT, __VA_ARGS__)
 
-void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
+static void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
 {
    int sock = -1;
    struct sockaddr_in server = {
@@ -56,7 +56,7 @@ void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
    }
 }
 
-int udp_debug(char *addr, uint32_t port, const char *fmt, ...)
+static int udp_debug(char *addr, uint32_t port, const char *fmt, ...)
 {
    int size = 0;
    va_list ap;
@@ -71,13 +71,15 @@ int udp_debug(char *addr, uint32_t port, const char *fmt, ...)
    return size;
 }
 
-float mountainoffsetx;
-float mountainoffsety;
+static int upper_cx;
+static int upper_cy;
+static int lower_cx;
+static int lower_cy;
 
-ASensorManager *sm;
-const ASensor *as;
-ASensorEventQueue *aeq;
-ALooper *l;
+static ASensorManager *sm;
+static const ASensor *as;
+static ASensorEventQueue *aeq;
+static ALooper *l;
 
 void SetupIMU()
 {
@@ -152,25 +154,27 @@ volatile int suspended;
 
 void HandleSuspend()
 {
+   debug("%s", __FUNCTION__);
    suspended = 1;
 }
 
 void HandleResume()
 {
+   debug("%s", __FUNCTION__);
    suspended = 0;
 }
 
-uint32_t *backdrop;
+static uint32_t *backdrop;
 
 #define SQ(X) ((X) * (X))
-int ring_elems;
+static int ring_elems;
 
 enum
 {
    NELEM_RINGS = 0x40,
 };
 
-struct target
+static struct target
 {
    int threshold;
    uint32_t colour;
@@ -187,7 +191,7 @@ enum
    YO = 0x00ffff,
 };
 
-void init_target(int radius)
+static void init_target(int radius)
 {
    struct
    {
@@ -230,7 +234,7 @@ void init_target(int radius)
    }
 }
 
-int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
+static int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
 {
    int dx = x - cx;
    int dy = y - cy;
@@ -249,16 +253,20 @@ int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
          }
       }
    }
-
    return 0;
 }
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-uint32_t *make_backdrop(int screenx, int screeny)
+static uint32_t *make_backdrop(int screenx, int screeny)
 {
    uint32_t size = screenx * screeny * sizeof(uint32_t);
    uint32_t *ret = memset(calloc(1, size), 0xff, size);
    int radius = MIN(screenx / 2, screeny / 4) * 3 / 4;
+
+   upper_cx = screenx / 2;
+   upper_cy = radius * 4 / 3;
+   lower_cx = screenx / 2;
+   lower_cy = screeny - radius * 5 / 3;
 
    init_target(radius);
 
@@ -268,17 +276,16 @@ uint32_t *make_backdrop(int screenx, int screeny)
       {
          uint32_t colour = 0;
 
-         if(plot_colour(screenx / 2, radius * 4 / 3, x, y, &colour))
+         if(plot_colour(upper_cx, upper_cy, x, y, &colour))
          {
             ret[x + y * screenx] = colour;
          }
-         else if(plot_colour(screenx / 2, screeny - radius * 5 / 3, x, y, &colour))
+         else if(plot_colour(lower_cx, lower_cy, x, y, &colour))
          {
             ret[x + y * screenx] = colour;
          }
       }
    }
-
    return ret;
 }
 
