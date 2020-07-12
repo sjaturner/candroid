@@ -114,12 +114,6 @@ static int keyboard_up;
 
 void HandleKey(int keycode, int down)
 {
-   if(0 && keycode == 10 && !down)
-   {
-      keyboard_up = 0;
-      AndroidDisplayKeyboard(keyboard_up);
-   }
-
    if(keycode == 4)
    {
       AndroidSendToBack(1);
@@ -127,19 +121,40 @@ void HandleKey(int keycode, int down)
    debug("%s %d %d", __FUNCTION__, keycode, down);
 }
 
+int down_state;
+
+int arrow_on;
+int arrow_x;
+int arrow_y;
+
 void HandleButton(int x, int y, int button, int down)
 {
-   if(0 && down)
+   if(!down_state && down)
    {
-      keyboard_up = !keyboard_up;
-      AndroidDisplayKeyboard(keyboard_up);
+      arrow_x = x - lower_cx + upper_cx;
+      arrow_y = y - lower_cy + upper_cy;
+      arrow_on = 1;
    }
-   debug("%s %d %d %d %d", __FUNCTION__, x, y, button, down);
+   else if(down_state && !down)
+   {
+      arrow_on = 0;
+   }
+
+   down_state = down;
+
+   debug("%s %d %d %d %d %d", __FUNCTION__, x, y, button, down, down_state);
 }
 
 void HandleMotion(int x, int y, int mask)
 {
    debug("%s %d %d 0x%08x", __FUNCTION__, x, y, mask);
+
+   debug("%s arrow %d %d %d", __FUNCTION__, arrow_on, arrow_x, arrow_y);
+   if(arrow_on)
+   {
+      arrow_x = x - lower_cx + upper_cx;
+      arrow_y = y - lower_cy + upper_cy;
+   }
 }
 
 extern struct android_app *gapp;
@@ -318,7 +333,10 @@ int main()
 
       CNFGUpdateScreenWithBitmap(backdrop, screenx, screeny);
 
-      CNFGDrawBox(100, 100, 105, 105);
+      if(arrow_on)
+      {
+         CNFGDrawBox(arrow_x - 3, arrow_y - 3, arrow_x + 3, arrow_y + 3);
+      }
 
       CNFGSwapBuffers();
 
