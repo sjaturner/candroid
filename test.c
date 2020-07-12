@@ -110,8 +110,6 @@ void AccCheck()
 
 void AndroidDisplayKeyboard(int pShow);
 
-static int keyboard_up;
-
 void HandleKey(int keycode, int down)
 {
    if(keycode == 4)
@@ -271,12 +269,14 @@ static int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
    return 0;
 }
 
+int radius;
+
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 static uint32_t *make_backdrop(int screenx, int screeny)
 {
    uint32_t size = screenx * screeny * sizeof(uint32_t);
    uint32_t *ret = memset(calloc(1, size), 0xff, size);
-   int radius = MIN(screenx / 2, screeny / 4) * 3 / 4;
+   radius = MIN(screenx / 2, screeny / 4) * 3 / 4;
 
    upper_cx = screenx / 2;
    upper_cy = radius * 4 / 3;
@@ -304,6 +304,62 @@ static uint32_t *make_backdrop(int screenx, int screeny)
    return ret;
 }
 
+enum
+{
+   ARROW_POINTS = 9,
+};
+
+struct
+{
+   float x;
+   float y;
+}
+arrow_points[ARROW_POINTS];
+
+void init_arrow_points(void)
+{
+   int arrow_steps[ARROW_POINTS] = {
+      1, 2, 3, 5, 6, 7, 9, 10, 11
+   };
+
+   for(int index = 0; index < ARROW_POINTS; ++index)
+   {
+      float theta = M_PI * arrow_steps[index] / 6;
+
+      arrow_points[index].x = cos(theta);
+      arrow_points[index].y = sin(theta);
+   }
+}
+
+void plot_arrow_flawed(int x, int y, float scale, float amp, uint32_t colour)
+{
+   RDPoint pp[ARROW_POINTS] = { };
+
+   for(int index = 0; index < ARROW_POINTS; ++index)
+   {
+      float factor = 1;
+
+      switch (index)
+      {
+         case 1:
+         case 4:
+         case 7:
+            factor = amp;
+      }
+
+      pp[index].x = x + arrow_points[index].x * scale * factor;
+      pp[index].y = y + arrow_points[index].y * scale * factor;
+   }
+
+   CNFGColor(colour);
+   CNFGTackPoly(pp, ARROW_POINTS + 1);
+}
+
+plot_arrow(int x, int y, float scale, float amp)
+{
+   plot_arrow_flawed(x, y, scale, amp, 0x00FF00); /* Oh poops. See this: https://blog.jayway.com/2009/12/04/opengl-es-tutorial-for-android-part-ii-building-a-polygon/ */
+}
+
 int main()
 {
    double ThisTime;
@@ -319,6 +375,7 @@ int main()
 
    CNFGGetDimensions(&screenx, &screeny);
 
+   init_arrow_points();
    backdrop = make_backdrop(screenx, screeny);
 
    debug("hello");
@@ -335,7 +392,8 @@ int main()
 
       if(arrow_on)
       {
-         CNFGDrawBox(arrow_x - 3, arrow_y - 3, arrow_x + 3, arrow_y + 3);
+         plot_arrow(arrow_x, arrow_y, radius / 40, 5);
+//       CNFGDrawBox(arrow_x - 3, arrow_y - 3, arrow_x + 3, arrow_y + 3);
       }
 
       CNFGSwapBuffers();
