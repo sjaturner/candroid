@@ -19,10 +19,13 @@
 #include <android_native_app_glue.h>
 #include <android/sensor.h>
 #include "CNFGAndroid.h"
+#include <android/log.h>
 
 #define CNFG_IMPLEMENTATION
 #define CNFG3D
 #include "CNFG.h"
+
+#define log(...) __android_log_print(ANDROID_LOG_VERBOSE, "spood", __VA_ARGS__)
 
 void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
 {
@@ -30,7 +33,7 @@ void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
    struct sockaddr_in server = {
       .sin_family = AF_INET,
       .sin_port = htons(port),
-      .sin_addr = inet_addr(addr),
+      .sin_addr.s_addr = inet_addr(addr),
    };
 
    if((sock = socket(AF_INET, SOCK_DGRAM, 0)) >= 0)
@@ -38,14 +41,14 @@ void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
       /* Send the message in buf to the server */
       if(sendto(sock, data, len, 0, (struct sockaddr *)&server, sizeof(server)) < 0)
       {
-         /* Muttley, do something! */
+         log("sendto failed");
       }
 
       close(sock);
    }
    else
    {
-      /* Muttley, do something! */
+      log("socket open failed");
    }
 }
 
@@ -58,6 +61,8 @@ int debug(char *addr, uint32_t port, const char *fmt, ...)
    va_start(ap, fmt);
    size = vsnprintf(buf, (int)sizeof buf - 1, fmt, ap);
    va_end(ap);
+
+   log(buf);
 
    udp_block(addr, port, buf, size);
 
@@ -298,6 +303,8 @@ int main()
    double LastFrameTime = OGGetAbsoluteTime();
    double SecToWait;
    short screenx, screeny;
+
+   log("starting");
 
    CNFGBGColor = 0x800000;
    CNFGDialogColor = 0x444444;
