@@ -92,7 +92,8 @@ int arrow_on;
 int arrow_x;
 int arrow_y;
 
-struct shot {
+struct shot
+{
    float x;
    float y;
    int score;
@@ -389,12 +390,12 @@ void init_amp_arrow_triangles(float scale)
       for(int black_triangle_index = 0; black_triangle_index < BLACK_TRIANGLES; ++black_triangle_index)
       {
          const int selector[BLACK_TRIANGLES][3] = { /* Annoying trianges only in cockwise order, FFS. */
-            {0, 1, 9, },
-            {0, 3, 1, },
-            {0, 4, 3, },
-            {0, 6, 4, },
-            {0, 7, 6, },
-            {0, 9, 7, },
+            {0, 1, 9,},
+            {0, 3, 1,},
+            {0, 4, 3,},
+            {0, 6, 4,},
+            {0, 7, 6,},
+            {0, 9, 7,},
          };
 
          for(int point_index = 0; point_index < 3; ++point_index)
@@ -471,7 +472,7 @@ int main()
 
       {
          float dim = MIN(screenx, screeny) / 8.0;
-         RDPoint pp[3] = { 
+         RDPoint pp[3] = {
             {0.0 * dim, 0.0 * dim},
             {1.0 * dim, 0.0 * dim},
             {0.0 * dim, 1.0 * dim},
@@ -488,7 +489,7 @@ int main()
 
       {
          float dim = MIN(screenx, screeny) / 8.0;
-         RDPoint pp[3] = { 
+         RDPoint pp[3] = {
             {screenx - 1.0 * dim, 0.0 * dim},
             {screenx - 0.0 * dim, 0.0 * dim},
             {screenx - 0.0 * dim, 1.0 * dim},
