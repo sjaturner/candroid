@@ -71,6 +71,8 @@ static int udp_debug(char *addr, uint32_t port, const char *fmt, ...)
    return size;
 }
 
+short screenx;
+short screeny;
 static int radius;
 static int upper_cx;
 static int upper_cy;
@@ -106,17 +108,49 @@ enum
 struct shot shots[SHOTS];
 int shot_count;
 
+#define CONTROL_SCREEN_FRACTION 8.0
+
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+
+int in_top_left(int x, int y)
+{
+   float dim = MIN(screenx, screeny) / CONTROL_SCREEN_FRACTION;
+
+   if(!dim)
+   {
+      return 0;
+   }
+
+   debug("%s %d %d %f %d", __FUNCTION__, x, y, dim, x + y < dim);
+   return x + y < dim;
+}
+
+int in_top_right(int x, int y)
+{
+   return in_top_left(screenx - x, y);
+}
+
 void HandleButton(int x, int y, int button, int down)
 {
+   int coord_x = x - lower_cx + upper_cx;
+   int coord_y = y - lower_cy + upper_cy;
+
    if(!down_state && down)
    {
-      arrow_x = x - lower_cx + upper_cx;
-      arrow_y = y - lower_cy + upper_cy;
+      arrow_x = coord_x;
+      arrow_y = coord_y;
       arrow_on = 1;
    }
    else if(down_state && !down)
    {
-      if(shot_count < SHOTS)
+      if(in_top_left(coord_x, coord_y))
+      {
+         shot_count = shot_count > 0 ? shot_count - 1 : 0;
+      }
+      else if(in_top_right(coord_x, coord_y))
+      {
+      }
+      else if(shot_count < SHOTS)
       {
          shots[shot_count].x = x - lower_cx;
          shots[shot_count].y = y - lower_cy;
@@ -257,7 +291,6 @@ static int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
    return 0;
 }
 
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 static uint32_t *make_backdrop(int screenx, int screeny)
 {
    uint32_t size = screenx * screeny * sizeof(uint32_t);
@@ -446,7 +479,6 @@ int main()
    double ThisTime;
    double LastFrameTime = OGGetAbsoluteTime();
    double SecToWait;
-   short screenx, screeny;
 
    log("starting");
 
@@ -471,7 +503,7 @@ int main()
       CNFGUpdateScreenWithBitmap(backdrop, screenx, screeny);
 
       {
-         float dim = MIN(screenx, screeny) / 8.0;
+         float dim = MIN(screenx, screeny) / CONTROL_SCREEN_FRACTION;
          RDPoint pp[3] = {
             {0.0 * dim, 0.0 * dim},
             {1.0 * dim, 0.0 * dim},
@@ -488,7 +520,7 @@ int main()
       }
 
       {
-         float dim = MIN(screenx, screeny) / 8.0;
+         float dim = MIN(screenx, screeny) / CONTROL_SCREEN_FRACTION;
          RDPoint pp[3] = {
             {screenx - 1.0 * dim, 0.0 * dim},
             {screenx - 0.0 * dim, 0.0 * dim},
