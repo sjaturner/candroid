@@ -387,7 +387,7 @@ void init_amp_arrow_triangles(float scale)
 
       for(int green_triangle_index = 0; green_triangle_index < GREEN_TRIANGLES; ++green_triangle_index)
       {
-         const int selector[GREEN_TRIANGLES][3] = {
+         const int selector[GREEN_TRIANGLES][3] = { /* Annoying trianges only in cockwise order, FFS. */
             {1, 3, 2,},
             {4, 6, 5,},
             {7, 8, 9,},
@@ -403,7 +403,7 @@ void init_amp_arrow_triangles(float scale)
 
       for(int black_triangle_index = 0; black_triangle_index < BLACK_TRIANGLES; ++black_triangle_index)
       {
-         const int selector[BLACK_TRIANGLES][3] = {
+         const int selector[BLACK_TRIANGLES][3] = { /* Annoying trianges only in cockwise order, FFS. */
             {0, 1, 9, },
             {0, 3, 1, },
             {0, 4, 3, },
@@ -422,7 +422,7 @@ void init_amp_arrow_triangles(float scale)
    }
 }
 
-void plot_arrow_flawed(int x, int y, float scale, int amp_index)
+void plot_arrow(int x, int y, float scale, int amp_index)
 {
    struct arrow_triangles *amp_arrow_triangle = amp_arrow_triangles + amp_index;
 
@@ -434,8 +434,8 @@ void plot_arrow_flawed(int x, int y, float scale, int amp_index)
 
       for(int point_index = 0; point_index < 3; ++point_index)
       {
-         pp[point_index].x = x + amp_arrow_triangles->green_triangles[green_triangle_index][point_index].x * scale;
-         pp[point_index].y = y + amp_arrow_triangles->green_triangles[green_triangle_index][point_index].y * scale;
+         pp[point_index].x = x + amp_arrow_triangle->green_triangles[green_triangle_index][point_index].x * scale;
+         pp[point_index].y = y + amp_arrow_triangle->green_triangles[green_triangle_index][point_index].y * scale;
       }
       CNFGTackPoly(pp, 3);
    }
@@ -448,16 +448,11 @@ void plot_arrow_flawed(int x, int y, float scale, int amp_index)
 
       for(int point_index = 0; point_index < 3; ++point_index)
       {
-         pp[point_index].x = x + amp_arrow_triangles->black_triangles[black_triangle_index][point_index].x * scale;
-         pp[point_index].y = y + amp_arrow_triangles->black_triangles[black_triangle_index][point_index].y * scale;
+         pp[point_index].x = x + amp_arrow_triangle->black_triangles[black_triangle_index][point_index].x * scale;
+         pp[point_index].y = y + amp_arrow_triangle->black_triangles[black_triangle_index][point_index].y * scale;
       }
       CNFGTackPoly(pp, 3);
    }
-}
-
-void plot_arrow(int x, int y, float scale, int amp_index)
-{
-   plot_arrow_flawed(x, y, scale, amp_index); /* Oh poops. See this: https://blog.jayway.com/2009/12/04/opengl-es-tutorial-for-android-part-ii-building-a-polygon/ */
 }
 
 int main()
@@ -491,8 +486,7 @@ int main()
 
       if(arrow_on)
       {
-         plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 5);
-//       CNFGDrawBox(arrow_x - 3, arrow_y - 3, arrow_x + 3, arrow_y + 3);
+         plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 9);
       }
 
       CNFGSwapBuffers();
