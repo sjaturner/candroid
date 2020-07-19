@@ -484,6 +484,40 @@ int main()
 
       CNFGUpdateScreenWithBitmap(backdrop, screenx, screeny);
 
+      {
+         float dim = MIN(screenx, screeny) / 8.0;
+         RDPoint pp[3] = { 
+            {0.0 * dim, 0.0 * dim},
+            {1.0 * dim, 0.0 * dim},
+            {0.0 * dim, 1.0 * dim},
+         };
+
+         CNFGColor(0x808080);
+         CNFGTackPoly(pp, 3);
+         CNFGPenX = 20;
+         CNFGPenY = 20;
+
+         CNFGColor(0x000000);
+         CNFGDrawText("U", 10);
+      }
+
+      {
+         float dim = MIN(screenx, screeny) / 8.0;
+         RDPoint pp[3] = { 
+            {screenx - 1.0 * dim, 0.0 * dim},
+            {screenx - 0.0 * dim, 0.0 * dim},
+            {screenx - 0.0 * dim, 1.0 * dim},
+         };
+
+         CNFGColor(0x808080);
+         CNFGTackPoly(pp, 3);
+         CNFGPenX = screenx - 40;
+         CNFGPenY = 20;
+
+         CNFGColor(0xff0000);
+         CNFGDrawText("S", 10);
+      }
+
       if(arrow_on)
       {
          plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 9);
