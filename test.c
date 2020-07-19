@@ -71,6 +71,7 @@ static int udp_debug(char *addr, uint32_t port, const char *fmt, ...)
    return size;
 }
 
+static int radius;
 static int upper_cx;
 static int upper_cy;
 static int lower_cx;
@@ -91,6 +92,19 @@ int arrow_on;
 int arrow_x;
 int arrow_y;
 
+struct shot {
+   float x;
+   float y;
+   int score;
+};
+
+enum
+{
+   SHOTS = 1000,
+};
+struct shot shots[SHOTS];
+int shot_count;
+
 void HandleButton(int x, int y, int button, int down)
 {
    if(!down_state && down)
@@ -101,6 +115,13 @@ void HandleButton(int x, int y, int button, int down)
    }
    else if(down_state && !down)
    {
+      if(shot_count < SHOTS)
+      {
+         shots[shot_count].x = x - lower_cx;
+         shots[shot_count].y = y - lower_cy;
+         ++shot_count;
+      }
+
       arrow_on = 0;
    }
 
@@ -234,8 +255,6 @@ static int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
    }
    return 0;
 }
-
-int radius;
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 static uint32_t *make_backdrop(int screenx, int screeny)
@@ -484,9 +503,19 @@ int main()
          CNFGDrawText("S", 10);
       }
 
+      for(int index = 0; index < shot_count; ++index)
+      {
+         struct shot *shot = shots + index;
+         int amp = shot_count - index;
+
+         amp = MIN(amp, AMP_ARROW_TRIANGLES - 1);
+
+         plot_arrow(shot->x + upper_cx, shot->y + upper_cy, 1.0 * radius / 40 / 40, amp);
+      }
+
       if(arrow_on)
       {
-         plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 9);
+         plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 0);
       }
 
       CNFGSwapBuffers();
