@@ -76,40 +76,6 @@ static int upper_cy;
 static int lower_cx;
 static int lower_cy;
 
-static ASensorManager *sm;
-static const ASensor *as;
-static ASensorEventQueue *aeq;
-static ALooper *l;
-
-void SetupIMU()
-{
-   sm = ASensorManager_getInstance();
-   as = ASensorManager_getDefaultSensor(sm, ASENSOR_TYPE_GYROSCOPE);
-   l = ALooper_prepare(ALOOPER_PREPARE_ALLOW_NON_CALLBACKS);
-   aeq = ASensorManager_createEventQueue(sm, (ALooper *) & l, 0, 0, 0); //XXX??!?! This looks wrong.
-   ASensorEventQueue_enableSensor(aeq, as);
-   printf("setEvent Rate: %d\n", ASensorEventQueue_setEventRate(aeq, as, 10000));
-}
-
-void AccCheck()
-{
-   ASensorEvent evt = { };
-   do
-   {
-      ssize_t s = ASensorEventQueue_getEvents(aeq, &evt, 1);
-      if(s <= 0)
-         break;
-#if 0
-      evt.vector.v[0];
-      evt.vector.v[1];
-      evt.vector.v[2];
-#endif
-   }
-   while(1);
-}
-
-void AndroidDisplayKeyboard(int pShow);
-
 void HandleKey(int keycode, int down)
 {
    if(keycode == 4)
