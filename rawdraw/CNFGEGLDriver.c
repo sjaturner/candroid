@@ -825,7 +825,8 @@ int __system_property_get(const char* name, char* value);
 void android_main(struct android_app* app)
 {
 	int main( int argc, char ** argv );
-	char * argv[] = { "main", 0 };
+
+	char * argv[] = { "main", (char *)app->activity->internalDataPath };
 
 	{
 		char sdk_ver_str[92];

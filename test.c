@@ -96,6 +96,7 @@ int arrow_y;
 
 struct shot
 {
+   time_t epoch;
    float x;
    float y;
    int score;
@@ -125,6 +126,58 @@ int in_top_left(int x, int y)
    return x + y < dim;
 }
 
+char *files_directory;
+
+void save_shots(void)
+{
+   if(!files_directory || shot_count <= 0)
+   {
+      return;
+   }
+   else
+   {
+      char formatted_time[0x80] = { };
+      struct tm tm = *localtime(&shots[0].epoch);
+      char filename[0x100] = { };
+
+      strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S.csv", &tm);
+      if(snprintf(filename, sizeof filename, "%s/%s", files_directory, formatted_time) >= (int)sizeof filename - 1)
+      {
+         return;
+      }
+      else
+      {
+         remove(filename);
+
+         {
+            FILE *file = fopen(filename, "w");
+
+            if(!file)
+            {
+               return;
+            }
+            else
+            {
+               for(int index = 0; index < shot_count; ++index)
+               {
+                  struct shot *shot = shots + index;
+                  char row[0x100] = { };
+                  char formatted_time[0x80] = { };
+                  struct tm tm = *localtime(&shot->epoch);
+                  int row_length = 0;
+
+                  strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S", &tm);
+
+                  row_length = snprintf(row, sizeof row, "\"%s\",\"%u\",\"%f\",\"%f\"\n", formatted_time, (unsigned)shot->epoch, shot->x, shot->y);
+                  fwrite(row, row_length, 1, file);
+               }
+            }
+            fclose(file);
+         }
+      }
+   }
+}
+
 int in_top_right(int x, int y)
 {
    return in_top_left(screenx - x, y);
@@ -149,9 +202,11 @@ void HandleButton(int x, int y, int button, int down)
       }
       else if(in_top_right(coord_x, coord_y))
       {
+         save_shots();
       }
       else if(shot_count < SHOTS)
       {
+         shots[shot_count].epoch = time(0);
          shots[shot_count].x = x - lower_cx;
          shots[shot_count].y = y - lower_cy;
          ++shot_count;
@@ -474,13 +529,16 @@ void plot_arrow(int x, int y, float scale, int amp_index)
    }
 }
 
-int main()
+
+int main(int argc, char *argv[])
 {
    double ThisTime;
    double LastFrameTime = OGGetAbsoluteTime();
    double SecToWait;
 
-   log("starting");
+   log("starting:%s", argv[1]);
+
+   files_directory = argv[1];
 
    CNFGBGColor = 0x800000;
    CNFGDialogColor = 0x444444;
