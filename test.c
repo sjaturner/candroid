@@ -2,6 +2,8 @@
 // NO WARRANTY! NO GUARANTEE OF SUPPORT! USE AT YOUR OWN RISK
 
 #include <arpa/inet.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <math.h>
 #include <netinet/in.h>
 #include <stdarg.h>
@@ -9,8 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 
 #include "os_generic.h"
 #include <GLES3/gl3.h>
@@ -130,8 +134,11 @@ char *files_directory;
 
 void save_shots(void)
 {
+   debug("%s:%d\n", __FILE__, __LINE__);
+
    if(!files_directory || shot_count <= 0)
    {
+      debug("%s:%d\n", __FILE__, __LINE__);
       return;
    }
    else
@@ -143,6 +150,7 @@ void save_shots(void)
       strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S.csv", &tm);
       if(snprintf(filename, sizeof filename, "%s/%s", files_directory, formatted_time) >= (int)sizeof filename - 1)
       {
+         debug("%s:%d\n", __FILE__, __LINE__);
          return;
       }
       else
@@ -150,14 +158,16 @@ void save_shots(void)
          remove(filename);
 
          {
-            FILE *file = fopen(filename, "w");
+            int file = open(filename, O_WRONLY | O_CREAT, 0666);
 
-            if(!file)
+            if(file < 0)
             {
+               debug("%s:%d %s %s\n", __FILE__, __LINE__, filename, strerror(errno));
                return;
             }
             else
             {
+               debug("%s:%d %s\n", __FILE__, __LINE__, filename);
                for(int index = 0; index < shot_count; ++index)
                {
                   struct shot *shot = shots + index;
@@ -169,10 +179,14 @@ void save_shots(void)
                   strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S", &tm);
 
                   row_length = snprintf(row, sizeof row, "\"%s\",\"%u\",\"%f\",\"%f\"\n", formatted_time, (unsigned)shot->epoch, shot->x, shot->y);
-                  fwrite(row, row_length, 1, file);
+                  if(write(file, row, row_length) < 0)
+                  {
+                     debug("%s:%d\n", __FILE__, __LINE__);
+                  }
                }
             }
-            fclose(file);
+            close(file);
+            shot_count = 0;
          }
       }
    }
@@ -538,7 +552,14 @@ int main(int argc, char *argv[])
 
    log("starting:%s", argv[1]);
 
-   files_directory = argv[1];
+   if(0)
+   {
+      files_directory = argv[1];
+   }
+   else
+   {
+      files_directory = "/sdcard/Android/data/org.yourorg.spoods/files";
+   }
 
    CNFGBGColor = 0x800000;
    CNFGDialogColor = 0x444444;
@@ -550,6 +571,7 @@ int main(int argc, char *argv[])
    backdrop = make_backdrop(screenx, screeny);
 
    debug("hello");
+   debug("%s", files_directory);
 
    while(1)
    {
