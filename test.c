@@ -283,6 +283,7 @@ static struct target
    int threshold;
    uint32_t colour;
    int score;
+   int line;
 }
 rings[NELEM_RINGS];
 
@@ -321,12 +322,13 @@ static void init_target(int radius)
       float outer_radius = radius - radius * (score - 1) / 10;
       float inner_radius = outer_radius - radius * 0.01;
 
-      rings[ring_elems].threshold = SQ(outer_radius);
+      rings[ring_elems].threshold = outer_radius;
       rings[ring_elems].colour = colours[score].outer;
       rings[ring_elems].score = score;
+      rings[ring_elems].line = 1;
       ++ring_elems;
 
-      rings[ring_elems].threshold = SQ(inner_radius);
+      rings[ring_elems].threshold = inner_radius;
       rings[ring_elems].colour = colours[score].inner;
       rings[ring_elems].score = score;
       ++ring_elems;
@@ -336,27 +338,68 @@ static void init_target(int radius)
          break;
       }
    }
+
+   for(int index = 0; index < ring_elems; ++index)
+   {
+      debug("0x%08x 0x%08x 0x%08x 0x%08x", index, rings[index].threshold, rings[index].score, rings[index].line);  
+   }
 }
 
-static int plot_colour(int cx, int cy, int x, int y, uint32_t *colour)
+uint32_t scale_colour(uint32_t colour, int colour_modifier)
+{
+   if(colour_modifier)
+   {
+      uint32_t modified_colour = 0;
+
+      for(uint32_t byte = 0; byte < 3; ++byte)
+      {
+         uint32_t scaled = ((colour >> 8 * byte) & 0xff) * colour_modifier / 0x100;
+
+         modified_colour |= (scaled & 0xff) << 8 * byte;
+      }
+
+      return modified_colour;
+   }
+   else
+   {
+      return colour;
+   }
+}
+
+static int plot_colour(int cx, int cy, int x, int y, uint32_t *colour, uint32_t *colour_modifier)
 {
    int dx = x - cx;
    int dy = y - cy;
    int square_sum = SQ(dx) + SQ(dy);
+   int abs_dx = dx < 0 ? -dx : dx;
+   int abs_dy = dy < 0 ? -dy : dy;
 
    *colour = 0;
 
-   if(square_sum <= rings[0].threshold)
+   for(int index = 0; !*colour_modifier && index < ring_elems - 1; ++index)
+   {
+      if(rings[index].line && abs_dx < rings[index].threshold && abs_dx > rings[index + 1].threshold)
+      {
+         *colour_modifier = 0xc0;
+      }
+      else if(rings[index].line && abs_dy < rings[index].threshold && abs_dy > rings[index + 1].threshold)
+      {
+         *colour_modifier = 0xc0;
+      }
+   }
+
+   if(square_sum <= SQ(rings[0].threshold))
    {
       for(int index = ring_elems - 1; index >= 0; --index)
       {
-         if(square_sum <= rings[index].threshold)
+         if(square_sum <= SQ(rings[index].threshold))
          {
             *colour = rings[index].colour;
             return 1;
          }
       }
    }
+
    return 0;
 }
 
@@ -378,14 +421,22 @@ static uint32_t *make_backdrop(int screenx, int screeny)
       for(int x = 0; x < screenx; x++)
       {
          uint32_t colour = 0;
+         uint32_t colour_modifier = 0;
 
-         if(plot_colour(upper_cx, upper_cy, x, y, &colour))
+         if(0)
          {
-            ret[x + y * screenx] = colour;
          }
-         else if(plot_colour(lower_cx, lower_cy, x, y, &colour))
+         else if(plot_colour(upper_cx, upper_cy, x, y, &colour, &colour_modifier))
          {
-            ret[x + y * screenx] = colour;
+            ret[x + y * screenx] = scale_colour(colour, colour_modifier);
+         }
+         else if(plot_colour(lower_cx, lower_cy, x, y, &colour, &colour_modifier))
+         {
+            ret[x + y * screenx] = scale_colour(colour, colour_modifier);
+         }
+         else
+         {
+            ret[x + y * screenx] = scale_colour(WT, colour_modifier);
          }
       }
    }
