@@ -351,44 +351,83 @@ enum
    WEST,
 };
 
+void swap(int *a, int *b)
+{
+   int tmp = *a;
+
+   *a = *b;
+   *b = tmp;
+}
+
 void plot_hist(struct hist *hist, int direction, int max, float *norm, int elems)
 {
-   int base_y = 0;
+   int base = 0;
+   int up = 0;
+
+   switch(direction)
+   {
+      case NORTH:
+         base = 0;
+         up = +1;
+         break;
+      case EAST:
+         base = screenx;
+         up = -1;
+         break;
+      case SOUTH:
+         base = screeny;
+         up = -1;
+         break;
+      case WEST:
+         base = 0;
+         up = +1;
+         break;
+   }
 
    for(int index = 0; index < hist->elems && index < elems; ++index)
    {
       struct bin *bin = hist->bins + index;
       int a_x = bin->a;
-      int a_y = base_y;
+      int a_y = base;
       int b_x = bin->b;
-      int b_y = base_y + max * norm[index];
+      int b_y = base + up * max * norm[index];
 
-      int tl_x = MIN(a_x, b_x);
-      int tl_y = MIN(a_y, b_y);
-      int tr_x = MAX(a_x, b_x);
-      int tr_y = MIN(a_y, b_y);
-      int br_x = MAX(a_x, b_x);
-      int br_y = MAX(a_y, b_y);
-      int bl_x = MIN(a_x, b_x);
-      int bl_y = MAX(a_y, b_y);
+      switch(direction)
+      {
+         case EAST:
+         case WEST:
+            swap(&a_x, &a_y);
+            swap(&b_x, &b_y);
+      }
 
       {
-         enum
+         int tl_x = MIN(a_x, b_x);
+         int tl_y = MIN(a_y, b_y);
+         int tr_x = MAX(a_x, b_x);
+         int tr_y = MIN(a_y, b_y);
+         int br_x = MAX(a_x, b_x);
+         int br_y = MAX(a_y, b_y);
+         int bl_x = MIN(a_x, b_x);
+         int bl_y = MAX(a_y, b_y);
+
          {
-            POINTS = 6,
-         };
-         RDPoint pp[POINTS] = {
-            {tl_x, tl_y},
-            {tr_x, tr_y},
-            {br_x, br_y},
+            enum
+            {
+               POINTS = 6,
+            };
+            RDPoint pp[POINTS] = {
+               {tl_x, tl_y},
+               {tr_x, tr_y},
+               {br_x, br_y},
 
-            {tl_x, tl_y},
-            {br_x, br_y},
-            {bl_x, bl_y},
-         };
+               {tl_x, tl_y},
+               {br_x, br_y},
+               {bl_x, bl_y},
+            };
 
-         CNFGColor(0x808080);
-         CNFGTackPoly(pp, POINTS);
+            CNFGColor(0x000000);
+            CNFGTackPoly(pp, POINTS);
+         }
       }
    }
 }
@@ -851,7 +890,7 @@ int main(int argc, char *argv[])
       {
          float norm[] = {0.1, 0.2, 0.0, 0.4, 0.5};
 
-         plot_hist(&hist_x, NORTH, screeny / 16.0, norm, NELEM(norm));
+         plot_hist(&hist_y, EAST, MIN(screeny, screenx) / 8.0, norm, NELEM(norm));
       };
 
       CNFGSwapBuffers();
