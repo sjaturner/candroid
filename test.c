@@ -244,6 +244,27 @@ static int score(int x, int y)
    return last_score;
 }
 
+static int score_linear(int a)
+{
+   int square_sum = SQ(a);
+   int last_score = 0;
+
+   if(square_sum <= SQ(rings[0].threshold))
+   {
+      for(int index = 0; index < ring_elems; ++index)
+      {
+         if(square_sum > SQ(rings[index].threshold))
+         {
+            debug("last_score:%d\n", last_score);
+            break;
+         }
+         last_score = rings[index].score;
+      }
+   }
+
+   return last_score;
+}
+
 static uint32_t *make_backdrop(int screenx, int screeny)
 {
    uint32_t size = screenx * screeny * sizeof(uint32_t);
@@ -604,6 +625,8 @@ struct shot
    float x;
    float y;
    int score;
+   int score_x;
+   int score_y;
 };
 
 enum
@@ -726,6 +749,8 @@ void HandleButton(int x, int y, int button, int down)
          shot->x = 1.0 * dx / radius;
          shot->y = 1.0 * dy / radius;
          shot->score = score(dx, dy);
+         shot->score_x = score_linear(dx);
+         shot->score_y = score_linear(dy);
       }
 
       arrow_on = 0;
@@ -768,6 +793,63 @@ void HandleResume()
 {
    debug("%s", __FUNCTION__);
    suspended = 0;
+}
+
+void norm(float *f, int elems, float max)
+{
+   for(int index = 0; index < elems; ++index)
+   {
+      if(!max)
+      {
+         f[index] = 0;
+      }
+      else
+      {
+         f[index] /= max;
+      }
+   }
+}
+
+void extract_x(struct shot *shot, float *val, int *score)
+{
+   *val = shot->x;
+   *score = shot->score_x;
+}
+
+void extract_y(struct shot *shot, float *val, int *score)
+{
+   *val = shot->y;
+   *score = shot->score_y;
+}
+
+void stats_linear(float *f, int elems, void (*extract)(struct shot *shot, float *val, int *score))
+{
+   float max = 0;
+
+   for(int index = 0; index < shot_count; ++index)
+   {
+      struct shot *shot = shots + index;
+      int bin = 0;
+      float val = 0;
+      int score = 0;
+
+      extract(shot, &val, &score);
+
+      if(val < 0)
+      {
+         bin = score - 1;
+      }
+      else
+      {
+         bin = 20 - score;
+      }
+
+      bin = MIN(MAX(bin, 0), elems - 1);
+      ++f[bin];
+      max = MAX(max, f[bin]);
+   }
+
+   norm(f, elems, max);
 }
 
 int main(int argc, char *argv[])
@@ -859,38 +941,20 @@ int main(int argc, char *argv[])
          plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 0);
       }
 
-      if(0)
       {
-         for(int index = 0; index < hist_x.elems; ++index)
+         enum
          {
-            struct bin *bin = hist_x.bins + index;
-            RDPoint pp[3] = {
-               {bin->b, 0},
-               {bin->a, 0},
-               {(bin->a + bin->b) / 2, 20},
-            };
+            STATS_BINS = 20,
+         };
+         float x[STATS_BINS] = { };
+         float y[STATS_BINS] = { };
+         float s[STATS_BINS] = { };
 
-            CNFGColor(0x808080);
-            CNFGTackPoly(pp, 3);
-         }
+         stats_linear(x, STATS_BINS, extract_x);
+         plot_hist(&hist_x, SOUTH, MIN(screeny, screenx) / 8.0, x, STATS_BINS);
 
-         for(int index = 0; index < hist_y.elems; ++index) {
-            struct bin *bin = hist_y.bins + index;
-            RDPoint pp[3] = {
-               {0, bin->a},
-               {20, (bin->a + bin->b) / 2},
-               {0, bin->b},
-            };
-
-            CNFGColor(0x808080);
-            CNFGTackPoly(pp, 3);
-         }
-      }
-
-      {
-         float norm[] = {0.1, 0.2, 0.0, 0.4, 0.5};
-
-         plot_hist(&hist_y, EAST, MIN(screeny, screenx) / 8.0, norm, NELEM(norm));
+         stats_linear(y, STATS_BINS, extract_y);
+         plot_hist(&hist_y, WEST, MIN(screeny, screenx) / 8.0, y, STATS_BINS);
       };
 
       CNFGSwapBuffers();
