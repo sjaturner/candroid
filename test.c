@@ -293,18 +293,21 @@ enum
    BINS = 20,
 };
 
-struct bin bin_x[BINS];
-int bin_x_elems;
+struct hist
+{
+   int elems;
+   struct bin bins[BINS];
+};
 
-struct bin bin_y[BINS];
-int bin_y_elems;
+struct hist hist_x;
+struct hist hist_y;
 
-void init_bins(struct bin *bins, int *elems, int c, int end)
+void init_bins(struct hist *hist, int c, int end)
 {
    int last_line = 0;
    int down = -1;
 
-   *elems = 0;
+   hist->elems = 0;
 
    for(int p = 0; p < end; p++)
    {
@@ -320,16 +323,14 @@ void init_bins(struct bin *bins, int *elems, int c, int end)
          }
       }
 
-      if(line && !last_line && *elems < BINS)
+      if(line && !last_line && hist->elems < BINS)
       {
          if(down >= 0)
          {
-            struct bin *bin = bins + *elems;
+            struct bin *bin = hist->bins + hist->elems++;
 
             bin->a = down;
             bin->b = p;
-
-            ++*elems;
          }
       }
       else if(!line && last_line)
@@ -703,8 +704,8 @@ int main(int argc, char *argv[])
 
    init_amp_arrow_triangles(40.0);
    backdrop = make_backdrop(screenx, screeny);
-   init_bins(bin_x, &bin_x_elems, lower_cx, screenx);
-   init_bins(bin_y, &bin_y_elems, lower_cy, screeny);
+   init_bins(&hist_x, lower_cx, screenx);
+   init_bins(&hist_y, lower_cy, screeny);
 
    debug("hello");
    debug("%s", files_directory);
@@ -767,9 +768,9 @@ int main(int argc, char *argv[])
          plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 0);
       }
 
-      for(int index = 0; index < bin_x_elems; ++index)
+      for(int index = 0; index < hist_x.elems; ++index)
       {
-         struct bin *bin = bin_x + index;
+         struct bin *bin = hist_x.bins + index;
          RDPoint pp[3] = {
             {bin->b, 0},
             {bin->a, 0},
@@ -780,8 +781,8 @@ int main(int argc, char *argv[])
          CNFGTackPoly(pp, 3);
       }
 
-      for(int index = 0; index < bin_y_elems; ++index) {
-         struct bin *bin = bin_y + index;
+      for(int index = 0; index < hist_y.elems; ++index) {
+         struct bin *bin = hist_y.bins + index;
          RDPoint pp[3] = {
             {0, bin->a},
             {20, (bin->a + bin->b) / 2},
