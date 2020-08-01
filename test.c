@@ -296,38 +296,45 @@ enum
 struct bin bin_x[BINS];
 int bin_x_elems;
 
-void init_bins(void)
+struct bin bin_y[BINS];
+int bin_y_elems;
+
+void init_bins(struct bin *bins, int *elems, int c, int end)
 {
    int last_line = 0;
-   int down_x = -1;
+   int down = -1;
 
-   for(int x = 0; x < screenx; x++)
+   *elems = 0;
+
+   for(int p = 0; p < end; p++)
    {
-      int dx = x - upper_cx;
-      int abs_dx = dx < 0 ? -dx : dx;
+      int d = p - c;
+      int abs_d = d < 0 ? -d : d;
       int line = 0;
 
       for(int index = 0; index < ring_elems - 1; ++index)
       {
-         if(abs_dx < radius * 0.01 || (rings[index].line && abs_dx < rings[index].threshold && abs_dx > rings[index + 1].threshold))
+         if(abs_d < radius * 0.01 || (rings[index].line && abs_d < rings[index].threshold && abs_d > rings[index + 1].threshold))
          {
             line = 1;
          }
       }
 
-      if(line && !last_line && bin_x_elems < BINS)
+      if(line && !last_line && *elems < BINS)
       {
-         if(down_x >= 0)
+         if(down >= 0)
          {
-            struct bin *bin = bin_x + bin_x_elems++;
+            struct bin *bin = bins + *elems;
 
-            bin->a = down_x;
-            bin->b = x;
+            bin->a = down;
+            bin->b = p;
+
+            ++*elems;
          }
       }
       else if(!line && last_line)
       {
-         down_x = x;
+         down = p;
       }
       last_line = line;
    }
@@ -696,7 +703,8 @@ int main(int argc, char *argv[])
 
    init_amp_arrow_triangles(40.0);
    backdrop = make_backdrop(screenx, screeny);
-   init_bins();
+   init_bins(bin_x, &bin_x_elems, lower_cx, screenx);
+   init_bins(bin_y, &bin_y_elems, lower_cy, screeny);
 
    debug("hello");
    debug("%s", files_directory);
@@ -766,6 +774,18 @@ int main(int argc, char *argv[])
             {bin->b, 0},
             {bin->a, 0},
             {(bin->a + bin->b) / 2, 20},
+         };
+
+         CNFGColor(0x808080);
+         CNFGTackPoly(pp, 3);
+      }
+
+      for(int index = 0; index < bin_y_elems; ++index) {
+         struct bin *bin = bin_y + index;
+         RDPoint pp[3] = {
+            {0, bin->a},
+            {20, (bin->a + bin->b) / 2},
+            {0, bin->b},
          };
 
          CNFGColor(0x808080);
