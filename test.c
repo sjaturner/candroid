@@ -36,6 +36,8 @@
 #define debug(...) udp_debug(TARGET_IP, TARGET_PORT, __VA_ARGS__)
 
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#define NELEM(A) ((size_t)(sizeof(A)/sizeof(A[0])))
 
 static void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
 {
@@ -338,6 +340,56 @@ void init_bins(struct hist *hist, int c, int end)
          down = p;
       }
       last_line = line;
+   }
+}
+
+enum
+{
+   NORTH,
+   EAST,
+   SOUTH,
+   WEST,
+};
+
+void plot_hist(struct hist *hist, int direction, int max, float *norm, int elems)
+{
+   int base_y = 0;
+
+   for(int index = 0; index < hist->elems && index < elems; ++index)
+   {
+      struct bin *bin = hist->bins + index;
+      int a_x = bin->a;
+      int a_y = base_y;
+      int b_x = bin->b;
+      int b_y = base_y + max * norm[index];
+
+      int tl_x = MIN(a_x, b_x);
+      int tl_y = MIN(a_y, b_y);
+      int tr_x = MAX(a_x, b_x);
+      int tr_y = MIN(a_y, b_y);
+      int br_x = MAX(a_x, b_x);
+      int br_y = MAX(a_y, b_y);
+      int bl_x = MIN(a_x, b_x);
+      int bl_y = MAX(a_y, b_y);
+
+      {
+         enum
+         {
+            POINTS = 6,
+         };
+         RDPoint pp[POINTS] = {
+            {tl_x, tl_y},
+            {tr_x, tr_y},
+            {br_x, br_y},
+
+            {tl_x, tl_y},
+            {br_x, br_y},
+            {bl_x, bl_y},
+         };
+
+         CNFGColor(0x808080);
+         CNFGTackPoly(pp, POINTS);
+      }
    }
 }
 
@@ -768,30 +820,39 @@ int main(int argc, char *argv[])
          plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 0);
       }
 
-      for(int index = 0; index < hist_x.elems; ++index)
+      if(0)
       {
-         struct bin *bin = hist_x.bins + index;
-         RDPoint pp[3] = {
-            {bin->b, 0},
-            {bin->a, 0},
-            {(bin->a + bin->b) / 2, 20},
-         };
+         for(int index = 0; index < hist_x.elems; ++index)
+         {
+            struct bin *bin = hist_x.bins + index;
+            RDPoint pp[3] = {
+               {bin->b, 0},
+               {bin->a, 0},
+               {(bin->a + bin->b) / 2, 20},
+            };
 
-         CNFGColor(0x808080);
-         CNFGTackPoly(pp, 3);
+            CNFGColor(0x808080);
+            CNFGTackPoly(pp, 3);
+         }
+
+         for(int index = 0; index < hist_y.elems; ++index) {
+            struct bin *bin = hist_y.bins + index;
+            RDPoint pp[3] = {
+               {0, bin->a},
+               {20, (bin->a + bin->b) / 2},
+               {0, bin->b},
+            };
+
+            CNFGColor(0x808080);
+            CNFGTackPoly(pp, 3);
+         }
       }
 
-      for(int index = 0; index < hist_y.elems; ++index) {
-         struct bin *bin = hist_y.bins + index;
-         RDPoint pp[3] = {
-            {0, bin->a},
-            {20, (bin->a + bin->b) / 2},
-            {0, bin->b},
-         };
+      {
+         float norm[] = {0.1, 0.2, 0.0, 0.4, 0.5};
 
-         CNFGColor(0x808080);
-         CNFGTackPoly(pp, 3);
-      }
+         plot_hist(&hist_x, NORTH, screeny / 16.0, norm, NELEM(norm));
+      };
 
       CNFGSwapBuffers();
 
