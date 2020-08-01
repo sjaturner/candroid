@@ -35,6 +35,8 @@
 #define TARGET_PORT 23456
 #define debug(...) udp_debug(TARGET_IP, TARGET_PORT, __VA_ARGS__)
 
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+
 static void udp_block(char *addr, uint32_t port, void *data, uint32_t len)
 {
    int sock = -1;
@@ -82,191 +84,6 @@ static int upper_cx;
 static int upper_cy;
 static int lower_cx;
 static int lower_cy;
-
-void HandleKey(int keycode, int down)
-{
-   if(keycode == 4)
-   {
-      AndroidSendToBack(1);
-   }                            //Handle Physical Back Button.
-   debug("%s %d %d", __FUNCTION__, keycode, down);
-}
-
-int down_state;
-
-int arrow_on;
-int arrow_x;
-int arrow_y;
-
-struct shot
-{
-   time_t epoch;
-   float x;
-   float y;
-   int score;
-};
-
-enum
-{
-   SHOTS = 1000,
-};
-struct shot shots[SHOTS];
-int shot_count;
-
-#define CONTROL_SCREEN_FRACTION 8.0
-
-#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
-
-int in_top_left(int x, int y)
-{
-   float dim = MIN(screenx, screeny) / CONTROL_SCREEN_FRACTION;
-
-   if(!dim)
-   {
-      return 0;
-   }
-
-   debug("%s %d %d %f %d", __FUNCTION__, x, y, dim, x + y < dim);
-   return x + y < dim;
-}
-
-char *files_directory;
-
-void save_shots(void)
-{
-   debug("%s:%d\n", __FILE__, __LINE__);
-
-   if(!files_directory || shot_count <= 0)
-   {
-      debug("%s:%d\n", __FILE__, __LINE__);
-      return;
-   }
-   else
-   {
-      char formatted_time[0x80] = { };
-      struct tm tm = *localtime(&shots[0].epoch);
-      char filename[0x100] = { };
-
-      strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S.csv", &tm);
-      if(snprintf(filename, sizeof filename, "%s/%s", files_directory, formatted_time) >= (int)sizeof filename - 1)
-      {
-         debug("%s:%d\n", __FILE__, __LINE__);
-         return;
-      }
-      else
-      {
-         remove(filename);
-
-         {
-            int file = open(filename, O_WRONLY | O_CREAT, 0666);
-
-            if(file < 0)
-            {
-               debug("%s:%d %s %s\n", __FILE__, __LINE__, filename, strerror(errno));
-               return;
-            }
-            else
-            {
-               debug("%s:%d %s\n", __FILE__, __LINE__, filename);
-               for(int index = 0; index < shot_count; ++index)
-               {
-                  struct shot *shot = shots + index;
-                  char row[0x100] = { };
-                  char formatted_time[0x80] = { };
-                  struct tm tm = *localtime(&shot->epoch);
-                  int row_length = 0;
-
-                  strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S", &tm);
-
-                  row_length = snprintf(row, sizeof row, "\"%s\",\"%u\",\"%f\",\"%f\"\n", formatted_time, (unsigned)shot->epoch, shot->x, shot->y);
-                  if(write(file, row, row_length) < 0)
-                  {
-                     debug("%s:%d\n", __FILE__, __LINE__);
-                  }
-               }
-            }
-            close(file);
-            shot_count = 0;
-         }
-      }
-   }
-}
-
-int in_top_right(int x, int y)
-{
-   return in_top_left(screenx - x, y);
-}
-
-void HandleButton(int x, int y, int button, int down)
-{
-   int coord_x = x - lower_cx + upper_cx;
-   int coord_y = y - lower_cy + upper_cy;
-
-   if(!down_state && down)
-   {
-      arrow_x = coord_x;
-      arrow_y = coord_y;
-      arrow_on = 1;
-   }
-   else if(down_state && !down)
-   {
-      if(in_top_left(coord_x, coord_y))
-      {
-         shot_count = shot_count > 0 ? shot_count - 1 : 0;
-      }
-      else if(in_top_right(coord_x, coord_y))
-      {
-         save_shots();
-      }
-      else if(shot_count < SHOTS)
-      {
-         shots[shot_count].epoch = time(0);
-         shots[shot_count].x = x - lower_cx;
-         shots[shot_count].y = y - lower_cy;
-         ++shot_count;
-      }
-
-      arrow_on = 0;
-   }
-
-   down_state = down;
-
-   debug("%s %d %d %d %d %d", __FUNCTION__, x, y, button, down, down_state);
-}
-
-void HandleMotion(int x, int y, int mask)
-{
-   debug("%s %d %d 0x%08x", __FUNCTION__, x, y, mask);
-
-   debug("%s arrow %d %d %d", __FUNCTION__, arrow_on, arrow_x, arrow_y);
-   if(arrow_on)
-   {
-      arrow_x = x - lower_cx + upper_cx;
-      arrow_y = y - lower_cy + upper_cy;
-   }
-}
-
-extern struct android_app *gapp;
-
-void HandleDestroy()
-{
-   printf("Destroying\n");
-   exit(10);
-}
-
-volatile int suspended;
-
-void HandleSuspend()
-{
-   debug("%s", __FUNCTION__);
-   suspended = 1;
-}
-
-void HandleResume()
-{
-   debug("%s", __FUNCTION__);
-   suspended = 0;
-}
 
 static uint32_t *backdrop;
 
@@ -341,9 +158,10 @@ static void init_target(int radius)
 
    for(int index = 0; index < ring_elems; ++index)
    {
-      debug("0x%08x 0x%08x 0x%08x 0x%08x", index, rings[index].threshold, rings[index].score, rings[index].line);  
+      debug("0x%08x 0x%08x 0x%08x 0x%08x", index, rings[index].threshold, rings[index].score, rings[index].line);
    }
 }
+
 
 uint32_t scale_colour(uint32_t colour, int colour_modifier)
 {
@@ -403,6 +221,27 @@ static int plot_colour(int cx, int cy, int x, int y, uint32_t *colour, uint32_t 
    return 0;
 }
 
+static int score(int x, int y)
+{
+   int square_sum = SQ(x) + SQ(y);
+   int last_score = 0;
+
+   if(square_sum <= SQ(rings[0].threshold))
+   {
+      for(int index = 0; index < ring_elems; ++index)
+      {
+         if(square_sum > SQ(rings[index].threshold))
+         {
+            debug("last_score:%d\n", last_score);
+            break;
+         }
+         last_score = rings[index].score;
+      }
+   }
+
+   return last_score;
+}
+
 static uint32_t *make_backdrop(int screenx, int screeny)
 {
    uint32_t size = screenx * screeny * sizeof(uint32_t);
@@ -441,6 +280,57 @@ static uint32_t *make_backdrop(int screenx, int screeny)
       }
    }
    return ret;
+}
+
+struct bin
+{
+   int a;
+   int b;
+};
+
+enum
+{
+   BINS = 20,
+};
+
+struct bin bin_x[BINS];
+int bin_x_elems;
+
+void init_bins(void)
+{
+   int last_line = 0;
+   int down_x = -1;
+
+   for(int x = 0; x < screenx; x++)
+   {
+      int dx = x - upper_cx;
+      int abs_dx = dx < 0 ? -dx : dx;
+      int line = 0;
+
+      for(int index = 0; index < ring_elems - 1; ++index)
+      {
+         if(abs_dx < radius * 0.01 || (rings[index].line && abs_dx < rings[index].threshold && abs_dx > rings[index + 1].threshold))
+         {
+            line = 1;
+         }
+      }
+
+      if(line && !last_line && bin_x_elems < BINS)
+      {
+         if(down_x >= 0)
+         {
+            struct bin *bin = bin_x + bin_x_elems++;
+
+            bin->a = down_x;
+            bin->b = x;
+         }
+      }
+      else if(!line && last_line)
+      {
+         down_x = x;
+      }
+      last_line = line;
+   }
 }
 
 enum
@@ -594,6 +484,192 @@ void plot_arrow(int x, int y, float scale, int amp_index)
    }
 }
 
+void HandleKey(int keycode, int down)
+{
+   if(keycode == 4)
+   {
+      AndroidSendToBack(1);
+   }                            //Handle Physical Back Button.
+   debug("%s %d %d", __FUNCTION__, keycode, down);
+}
+
+int down_state;
+
+int arrow_on;
+int arrow_x;
+int arrow_y;
+
+struct shot
+{
+   time_t epoch;
+   float x;
+   float y;
+   int score;
+};
+
+enum
+{
+   SHOTS = 1000,
+};
+struct shot shots[SHOTS];
+int shot_count;
+
+#define CONTROL_SCREEN_FRACTION 8.0
+
+int in_top_left(int x, int y)
+{
+   float dim = MIN(screenx, screeny) / CONTROL_SCREEN_FRACTION;
+
+   if(!dim)
+   {
+      return 0;
+   }
+
+   debug("%s %d %d %f %d", __FUNCTION__, x, y, dim, x + y < dim);
+   return x + y < dim;
+}
+
+char *files_directory;
+
+void save_shots(void)
+{
+   debug("%s:%d\n", __FILE__, __LINE__);
+
+   if(!files_directory || shot_count <= 0)
+   {
+      debug("%s:%d\n", __FILE__, __LINE__);
+      return;
+   }
+   else
+   {
+      char formatted_time[0x80] = { };
+      struct tm tm = *localtime(&shots[0].epoch);
+      char filename[0x100] = { };
+
+      strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S.csv", &tm);
+      if(snprintf(filename, sizeof filename, "%s/%s", files_directory, formatted_time) >= (int)sizeof filename - 1)
+      {
+         debug("%s:%d\n", __FILE__, __LINE__);
+         return;
+      }
+      else
+      {
+         remove(filename);
+
+         {
+            int file = open(filename, O_WRONLY | O_CREAT, 0666);
+
+            if(file < 0)
+            {
+               debug("%s:%d %s %s\n", __FILE__, __LINE__, filename, strerror(errno));
+               return;
+            }
+            else
+            {
+               debug("%s:%d %s\n", __FILE__, __LINE__, filename);
+               for(int index = 0; index < shot_count; ++index)
+               {
+                  struct shot *shot = shots + index;
+                  char row[0x100] = { };
+                  char formatted_time[0x80] = { };
+                  struct tm tm = *localtime(&shot->epoch);
+                  int row_length = 0;
+
+                  strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S", &tm);
+
+                  row_length = snprintf(row, sizeof row, "\"%s\",\"%u\",\"%f\",\"%f\"\n", formatted_time, (unsigned)shot->epoch, shot->x, shot->y);
+                  if(write(file, row, row_length) < 0)
+                  {
+                     debug("%s:%d\n", __FILE__, __LINE__);
+                  }
+               }
+            }
+            close(file);
+            shot_count = 0;
+         }
+      }
+   }
+}
+
+int in_top_right(int x, int y)
+{
+   return in_top_left(screenx - x, y);
+}
+
+void HandleButton(int x, int y, int button, int down)
+{
+   int coord_x = x - lower_cx + upper_cx;
+   int coord_y = y - lower_cy + upper_cy;
+
+   if(!down_state && down)
+   {
+      arrow_x = coord_x;
+      arrow_y = coord_y;
+      arrow_on = 1;
+   }
+   else if(down_state && !down)
+   {
+      if(in_top_left(coord_x, coord_y))
+      {
+         shot_count = shot_count > 0 ? shot_count - 1 : 0;
+      }
+      else if(in_top_right(coord_x, coord_y))
+      {
+         save_shots();
+      }
+      else if(shot_count < SHOTS)
+      {
+         struct shot *shot = shots + shot_count++;
+         int dx = x - lower_cx;
+         int dy = y - lower_cy;
+
+         shot->epoch = time(0);
+         shot->x = 1.0 * dx / radius;
+         shot->y = 1.0 * dy / radius;
+         shot->score = score(dx, dy);
+      }
+
+      arrow_on = 0;
+   }
+
+   down_state = down;
+
+// debug("%s %d %d %d %d %d", __FUNCTION__, x, y, button, down, down_state);
+}
+
+void HandleMotion(int x, int y, int mask)
+{
+// debug("%s %d %d 0x%08x", __FUNCTION__, x, y, mask);
+
+// debug("%s arrow %d %d %d", __FUNCTION__, arrow_on, arrow_x, arrow_y);
+   if(arrow_on)
+   {
+      arrow_x = x - lower_cx + upper_cx;
+      arrow_y = y - lower_cy + upper_cy;
+   }
+}
+
+extern struct android_app *gapp;
+
+void HandleDestroy()
+{
+   printf("Destroying\n");
+   exit(10);
+}
+
+volatile int suspended;
+
+void HandleSuspend()
+{
+   debug("%s", __FUNCTION__);
+   suspended = 1;
+}
+
+void HandleResume()
+{
+   debug("%s", __FUNCTION__);
+   suspended = 0;
+}
 
 int main(int argc, char *argv[])
 {
@@ -620,6 +696,7 @@ int main(int argc, char *argv[])
 
    init_amp_arrow_triangles(40.0);
    backdrop = make_backdrop(screenx, screeny);
+   init_bins();
 
    debug("hello");
    debug("%s", files_directory);
@@ -674,7 +751,7 @@ int main(int argc, char *argv[])
 
          amp = MIN(amp, AMP_ARROW_TRIANGLES - 1);
 
-         plot_arrow(shot->x + upper_cx, shot->y + upper_cy, 1.0 * radius / 40 / 40, amp);
+         plot_arrow(shot->x * radius + upper_cx, shot->y * radius + upper_cy, 1.0 * radius / 40 / 40, amp);
       }
 
       if(arrow_on)
