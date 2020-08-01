@@ -852,6 +852,31 @@ void stats_linear(float *f, int elems, void (*extract)(struct shot *shot, float 
    norm(f, elems, max);
 }
 
+void stats_score(float *f, int elems)
+{
+   float max = 0;
+   float acc = 0;
+
+   for(int index = 0; index < shot_count; ++index)
+   {
+      struct shot *shot = shots + index;
+      int bin = shot->score - 1;
+
+      bin = MIN(MAX(bin, 0), elems - 1);
+      ++f[bin];
+      max = MAX(max, f[bin]);
+   }
+
+   for(int index = 10 - 1; index >= 0; --index)
+   {
+      acc += f[index];
+      f[20 - index] = acc;
+   }
+
+   norm(f, 10, max);
+   norm(f + 10, 10, acc);
+}
+
 int main(int argc, char *argv[])
 {
    double ThisTime;
@@ -955,6 +980,9 @@ int main(int argc, char *argv[])
 
          stats_linear(y, STATS_BINS, extract_y);
          plot_hist(&hist_y, WEST, MIN(screeny, screenx) / 8.0, y, STATS_BINS);
+
+         stats_score(s, STATS_BINS);
+         plot_hist(&hist_y, EAST, MIN(screeny, screenx) / 8.0, s, STATS_BINS);
       };
 
       CNFGSwapBuffers();
