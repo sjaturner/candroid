@@ -759,6 +759,19 @@ int main(int argc, char *argv[])
          plot_arrow(arrow_x, arrow_y, 1.0 * radius / 40 / 40, 0);
       }
 
+      for(int index = 0; index < bin_x_elems; ++index)
+      {
+         struct bin *bin = bin_x + index;
+         RDPoint pp[3] = {
+            {bin->b, 0},
+            {bin->a, 0},
+            {(bin->a + bin->b) / 2, 20},
+         };
+
+         CNFGColor(0x808080);
+         CNFGTackPoly(pp, 3);
+      }
+
       CNFGSwapBuffers();
 
       ThisTime = OGGetAbsoluteTime();
