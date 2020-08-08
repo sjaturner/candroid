@@ -234,7 +234,6 @@ static int score(int x, int y)
       {
          if(square_sum > SQ(rings[index].threshold))
          {
-            debug("last_score:%d\n", last_score);
             break;
          }
          last_score = rings[index].score;
@@ -255,7 +254,6 @@ static int score_linear(int a)
       {
          if(square_sum > SQ(rings[index].threshold))
          {
-            debug("last_score:%d\n", last_score);
             break;
          }
          last_score = rings[index].score;
@@ -650,11 +648,26 @@ int in_top_left(int x, int y)
       return 0;
    }
 
-   debug("%s %d %d %f %d", __FUNCTION__, x, y, dim, x + y < dim);
    return x + y < dim;
 }
 
 char *files_directory;
+
+char filename_buffer[0x100];
+char *filename;
+
+void setup_filename()
+{
+   if(!filename)
+   {
+      time_t epoch = time(0);
+      struct tm tm = *localtime(&epoch);
+
+      memset(filename_buffer, 0, sizeof filename_buffer);
+      strftime(filename_buffer, sizeof(filename_buffer), "%Y-%m-%d-%H-%M-%S.csv", &tm);
+      filename = filename_buffer;
+   }
+}
 
 void save_shots(void)
 {
@@ -665,53 +678,50 @@ void save_shots(void)
       debug("%s:%d\n", __FILE__, __LINE__);
       return;
    }
-   else
+   else if(filename && strlen(filename))
    {
-      char formatted_time[0x80] = { };
-      struct tm tm = *localtime(&shots[0].epoch);
-      char filename[0x100] = { };
+      char absolute_pathname[0x200] = { };
 
-      strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S.csv", &tm);
-      if(snprintf(filename, sizeof filename, "%s/%s", files_directory, formatted_time) >= (int)sizeof filename - 1)
+      if(snprintf(absolute_pathname, sizeof absolute_pathname, "%s/%s", files_directory, filename) >= (int)sizeof absolute_pathname - 1)
       {
-         debug("%s:%d\n", __FILE__, __LINE__);
+         debug("%s:%d %s %s\n", __FILE__, __LINE__, files_directory, filename);
          return;
       }
       else
       {
-         remove(filename);
+         remove(absolute_pathname);
 
+         int file = open(absolute_pathname, O_WRONLY | O_CREAT, 0666);
+
+         if(file < 0)
          {
-            int file = open(filename, O_WRONLY | O_CREAT, 0666);
+            debug("%s:%d %s %s\n", __FILE__, __LINE__, absolute_pathname, strerror(errno));
+            return;
+         }
+         else
+         {
+            debug("%s:%d %s\n", __FILE__, __LINE__, absolute_pathname);
+            for(int index = 0; index < shot_count; ++index)
+            {
+               struct shot *shot = shots + index;
+               char row[0x100] = { };
+               char formatted_time[0x80] = { };
+               struct tm tm = *localtime(&shot->epoch);
+               int row_length = 0;
 
-            if(file < 0)
-            {
-               debug("%s:%d %s %s\n", __FILE__, __LINE__, filename, strerror(errno));
-               return;
-            }
-            else
-            {
-               debug("%s:%d %s\n", __FILE__, __LINE__, filename);
-               for(int index = 0; index < shot_count; ++index)
+               strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S", &tm);
+
+               row_length = snprintf(row, sizeof row, "\"%s\",\"%u\",\"%f\",\"%f\"\n", formatted_time, (unsigned)shot->epoch, shot->x, shot->y);
+               if(write(file, row, row_length) < 0)
                {
-                  struct shot *shot = shots + index;
-                  char row[0x100] = { };
-                  char formatted_time[0x80] = { };
-                  struct tm tm = *localtime(&shot->epoch);
-                  int row_length = 0;
-
-                  strftime(formatted_time, sizeof(formatted_time), "%Y-%m-%d-%H-%M-%S", &tm);
-
-                  row_length = snprintf(row, sizeof row, "\"%s\",\"%u\",\"%f\",\"%f\"\n", formatted_time, (unsigned)shot->epoch, shot->x, shot->y);
-                  if(write(file, row, row_length) < 0)
-                  {
-                     debug("%s:%d\n", __FILE__, __LINE__);
-                  }
+                  debug("%s:%d\n", __FILE__, __LINE__);
                }
             }
-            close(file);
-            shot_count = 0;
          }
+         close(file);
+         shot_count = 0;
+         filename = 0;
+         setup_filename();
       }
    }
 }
@@ -945,6 +955,8 @@ int main(int argc, char *argv[])
 
    log("starting:%s", argv[1]);
 
+   setup_filename();
+
    if(0)
    {
       files_directory = argv[1];
@@ -1048,11 +1060,19 @@ int main(int argc, char *argv[])
          snprintf(buffer, sizeof buffer, "%02d %03d %04d %02.2f", current_score, shot_count, total, shot_count ? 1.0 * total / shot_count : 0.0);
 
          {
-            int width = strlen(buffer) * FONT_WIDTH;
+            int width = strlen(buffer) * FONT_WIDTH * FONT_SCALE;
 
-            plot_string(upper_cx - width * FONT_SCALE / 2, (upper_cy + lower_cy) / 2 + FONT_HEIGHT * FONT_SCALE / 2, FONT_SCALE, 0, font_strokes_xterm, buffer);
+            plot_string(upper_cx - width / 2, (upper_cy + lower_cy) / 2 + FONT_HEIGHT * FONT_SCALE / 2, FONT_SCALE, 0, font_strokes_xterm, buffer);
          }
       }
+
+      if(filename)
+      {
+         int width = strlen(filename) * FONT_WIDTH * FONT_SCALE;
+
+         plot_string(upper_cx - width / 2, (FONT_HEIGHT + 1) * FONT_SCALE, FONT_SCALE, 0, font_strokes_xterm, filename);
+      }
+
 
       CNFGSwapBuffers();
 
