@@ -416,7 +416,7 @@ void plot_hist(struct hist *hist, int direction, int max, float *norm, int elems
    int base = 0;
    int up = 0;
 
-   switch(direction)
+   switch (direction)
    {
       case NORTH:
          base = 0;
@@ -444,7 +444,7 @@ void plot_hist(struct hist *hist, int direction, int max, float *norm, int elems
       int b_x = bin->b;
       int b_y = base + up * max * norm[index];
 
-      switch(direction)
+      switch (direction)
       {
          case EAST:
          case WEST:
@@ -764,6 +764,8 @@ void HandleButton(int x, int y, int button, int down)
 // debug("%s %d %d %d %d %d", __FUNCTION__, x, y, button, down, down_state);
 }
 
+int current_score;
+
 void HandleMotion(int x, int y, int mask)
 {
 // debug("%s %d %d 0x%08x", __FUNCTION__, x, y, mask);
@@ -773,6 +775,13 @@ void HandleMotion(int x, int y, int mask)
    {
       arrow_x = x - lower_cx + upper_cx;
       arrow_y = y - lower_cy + upper_cy;
+
+      {
+         int dx = x - lower_cx;
+         int dy = y - lower_cy;
+
+         current_score = score(dx, dy);
+      }
    }
 }
 
@@ -825,7 +834,7 @@ void extract_y(struct shot *shot, float *val, int *score)
    *score = shot->score_y;
 }
 
-void stats_linear(float *f, int elems, void (*extract)(struct shot *shot, float *val, int *score))
+void stats_linear(float *f, int elems, void (*extract)(struct shot * shot, float *val, int *score))
 {
    float max = 0;
 
@@ -880,7 +889,27 @@ void stats_score(float *f, int elems)
    norm(f + 10, 10, acc);
 }
 
+int stats_total(void)
+{
+   int total = 0;
+
+   for(int index = 0; index < shot_count; ++index)
+   {
+      struct shot *shot = shots + index;
+
+      total += shot->score;
+
+   }
+
+   return total;
+}
+
 #include "font_coord.h"
+enum
+{
+   FONT_WIDTH = 6,
+   FONT_HEIGHT = 13,
+};
 
 extern struct font_strokes *font_strokes_xterm[];
 
@@ -900,12 +929,16 @@ void plot_string(int x, int y, int scale, unsigned color, struct font_strokes **
    for(int index = 0; string[index]; ++index)
    {
       plot_char(x, y, scale, color, font_strokes[(int)string[index]]);
-      x += 6 * scale;
+      x += FONT_WIDTH * scale;
    }
 }
 
 int main(int argc, char *argv[])
 {
+   enum
+   {
+      FONT_SCALE = 5,
+   };
    double ThisTime;
    double LastFrameTime = OGGetAbsoluteTime();
    double SecToWait;
@@ -954,11 +987,8 @@ int main(int argc, char *argv[])
 
          CNFGColor(0x808080);
          CNFGTackPoly(pp, 3);
-         CNFGPenX = 20;
-         CNFGPenY = 20;
 
-         CNFGColor(0x000000);
-         CNFGDrawText("U", 10);
+         plot_string(FONT_SCALE, (FONT_HEIGHT + 1) * FONT_SCALE, FONT_SCALE, 0, font_strokes_xterm, "U");
       }
 
       {
@@ -974,8 +1004,7 @@ int main(int argc, char *argv[])
          CNFGPenX = screenx - 40;
          CNFGPenY = 20;
 
-         CNFGColor(0xff0000);
-         CNFGDrawText("S", 10);
+         plot_string(screenx - FONT_SCALE * (FONT_WIDTH + 1), (FONT_HEIGHT + 1) * FONT_SCALE, FONT_SCALE, 0, font_strokes_xterm, "S");
       }
 
       for(int index = 0; index < shot_count; ++index)
@@ -1012,8 +1041,19 @@ int main(int argc, char *argv[])
          plot_hist(&hist_y, EAST, MIN(screeny, screenx) / 8.0, s, STATS_BINS);
       };
 
-      plot_char(100, 150, 5, 0, font_strokes_xterm['R']);
-      plot_string(100, 200, 5, 0, font_strokes_xterm, "Hello World");
+      {
+         char buffer[0x100] = { };
+         int total = stats_total();
+
+         snprintf(buffer, sizeof buffer, "%02d %03d %04d %02.2f", current_score, shot_count, total, shot_count ? 1.0 * total / shot_count : 0.0);
+
+         {
+            int width = strlen(buffer) * FONT_WIDTH;
+
+            plot_string(upper_cx - width * FONT_SCALE / 2, (upper_cy + lower_cy) / 2 + FONT_HEIGHT * FONT_SCALE / 2, FONT_SCALE, 0, font_strokes_xterm, buffer);
+         }
+      }
+
       CNFGSwapBuffers();
 
       ThisTime = OGGetAbsoluteTime();
