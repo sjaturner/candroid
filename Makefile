@@ -3,6 +3,12 @@
 
 all : makecapk.apk 
 
+bdftorect: bdftorect.c
+	gcc -Wall $^ -o $@
+
+xterm_font.c: bdftorect
+	./bdftorect xterm < 6x13-ISO8859-1.bdf > xterm_font.c
+
 .PHONY : push run
 
 # WARNING WARNING WARNING!  YOU ABSOLUTELY MUST OVERRIDE THE PROJECT NAME
@@ -12,7 +18,7 @@ APKFILE ?= $(APPNAME).apk
 PACKAGENAME?=org.yourorg.$(APPNAME)
 RAWDRAWANDROID?=.
 RAWDRAWANDROIDSRCS=$(RAWDRAWANDROID)/android_native_app_glue.c
-SRC?=test.c
+SRC?=test.c xterm_font.c
 
 #We've tested it with android version 22, 24, 28 and 29. 
 #You can target something like Android 28, but if you set ANDROIDVERSION to say 22, then
@@ -171,5 +177,5 @@ run : push
 	$(ADB) shell am start -n $(PACKAGENAME)/$(ACTIVITYNAME)
 
 clean :
-	rm -rf temp.apk makecapk.apk makecapk $(APKFILE)
+	rm -rf temp.apk makecapk.apk makecapk $(APKFILE) bdftorect xterm_font.c
 

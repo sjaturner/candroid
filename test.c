@@ -380,6 +380,37 @@ void swap(int *a, int *b)
    *b = tmp;
 }
 
+void plot_rect(int a_x, int a_y, int b_x, int b_y, unsigned colour)
+{
+   int tl_x = MIN(a_x, b_x);
+   int tl_y = MIN(a_y, b_y);
+   int tr_x = MAX(a_x, b_x);
+   int tr_y = MIN(a_y, b_y);
+   int br_x = MAX(a_x, b_x);
+   int br_y = MAX(a_y, b_y);
+   int bl_x = MIN(a_x, b_x);
+   int bl_y = MAX(a_y, b_y);
+
+   {
+      enum
+      {
+         POINTS = 6,
+      };
+      RDPoint pp[POINTS] = {
+         {tl_x, tl_y},
+         {tr_x, tr_y},
+         {br_x, br_y},
+
+         {tl_x, tl_y},
+         {br_x, br_y},
+         {bl_x, bl_y},
+      };
+
+      CNFGColor(colour);
+      CNFGTackPoly(pp, POINTS);
+   }
+}
+
 void plot_hist(struct hist *hist, int direction, int max, float *norm, int elems)
 {
    int base = 0;
@@ -421,35 +452,7 @@ void plot_hist(struct hist *hist, int direction, int max, float *norm, int elems
             swap(&b_x, &b_y);
       }
 
-      {
-         int tl_x = MIN(a_x, b_x);
-         int tl_y = MIN(a_y, b_y);
-         int tr_x = MAX(a_x, b_x);
-         int tr_y = MIN(a_y, b_y);
-         int br_x = MAX(a_x, b_x);
-         int br_y = MAX(a_y, b_y);
-         int bl_x = MIN(a_x, b_x);
-         int bl_y = MAX(a_y, b_y);
-
-         {
-            enum
-            {
-               POINTS = 6,
-            };
-            RDPoint pp[POINTS] = {
-               {tl_x, tl_y},
-               {tr_x, tr_y},
-               {br_x, br_y},
-
-               {tl_x, tl_y},
-               {br_x, br_y},
-               {bl_x, bl_y},
-            };
-
-            CNFGColor(0x000000);
-            CNFGTackPoly(pp, POINTS);
-         }
-      }
+      plot_rect(a_x, a_y, b_x, b_y, 0x000000);
    }
 }
 
@@ -877,6 +880,30 @@ void stats_score(float *f, int elems)
    norm(f + 10, 10, acc);
 }
 
+#include "font_coord.h"
+
+extern struct font_strokes *font_strokes_xterm[];
+
+void plot_char(int x, int y, int scale, unsigned color, struct font_strokes *font_strokes)
+{
+   for(int index = 0; index < font_strokes->length; ++index)
+   {
+      struct font_coord *a = font_strokes->font_coords + index * 2 + 0;
+      struct font_coord *b = font_strokes->font_coords + index * 2 + 1;
+
+      plot_rect(x + a->row * scale, y - a->col * scale, x + (b->row + 1) * scale, y - (b->col + 1) * scale, color);
+   }
+}
+
+void plot_string(int x, int y, int scale, unsigned color, struct font_strokes **font_strokes, char *string)
+{
+   for(int index = 0; string[index]; ++index)
+   {
+      plot_char(x, y, scale, color, font_strokes[(int)string[index]]);
+      x += 6 * scale;
+   }
+}
+
 int main(int argc, char *argv[])
 {
    double ThisTime;
@@ -985,6 +1012,8 @@ int main(int argc, char *argv[])
          plot_hist(&hist_y, EAST, MIN(screeny, screenx) / 8.0, s, STATS_BINS);
       };
 
+      plot_char(100, 150, 5, 0, font_strokes_xterm['R']);
+      plot_string(100, 200, 5, 0, font_strokes_xterm, "Hello World");
       CNFGSwapBuffers();
 
       ThisTime = OGGetAbsoluteTime();
