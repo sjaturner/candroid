@@ -957,7 +957,7 @@ int main(int argc, char *argv[])
 
    setup_filename();
 
-   if(0)
+   if(1)
    {
       files_directory = argv[1];
    }
@@ -979,6 +979,7 @@ int main(int argc, char *argv[])
 
    debug("hello");
    debug("%s", files_directory);
+   debug("%s", argv[1]);
 
    while(1)
    {

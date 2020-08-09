@@ -824,27 +824,50 @@ int __system_property_get(const char* name, char* value);
 
 void android_main(struct android_app* app)
 {
-	int main( int argc, char ** argv );
+   int main( int argc, char ** argv );
 
-	char * argv[] = { "main", (char *)app->activity->internalDataPath };
+   const char* path = 0; // app->activity->externalDataPath;; // app->activity->internalDataPath;
 
-	{
-		char sdk_ver_str[92];
-		int len = __system_property_get("ro.build.version.sdk", sdk_ver_str);
-		if( len <= 0 ) 
-			android_sdk_version = 0;
-		else
-			android_sdk_version = atoi(sdk_ver_str);
-	}
+   if (!path) 
+   {
+      JNIEnv* jni = 0;
+      (*app->activity->vm)->AttachCurrentThread(app->activity->vm, &jni, NULL);
 
-	gapp = app;
-	app->onAppCmd = handle_cmd;
-	app->onInputEvent = handle_input;
-	printf( "Starting with Android SDK Version: %d", android_sdk_version );
+      jclass activityClass = (*jni)->GetObjectClass(jni, app->activity->clazz);
+      jmethodID getFilesDir = (*jni)->GetMethodID(jni, activityClass, "getFilesDir", "()Ljava/io/File;");
+      jobject fileObject = (*jni)->CallObjectMethod(jni, app->activity->clazz, getFilesDir);
+      jclass fileClass = (*jni)->GetObjectClass(jni, fileObject);
+      jmethodID getAbsolutePath = (*jni)->GetMethodID(jni, fileClass, "getAbsolutePath", "()Ljava/lang/String;");
+      jobject pathObject = (*jni)->CallObjectMethod(jni, fileObject, getAbsolutePath);
+      path = (*jni)->GetStringUTFChars(jni, (jstring)pathObject, NULL);
 
-	printf( "Starting Main\n" );
-	main( 1, argv );
-	printf( "Main Complete\n" );
+      (*jni)->DeleteLocalRef(jni, pathObject);
+      (*jni)->DeleteLocalRef(jni, fileClass);
+      (*jni)->DeleteLocalRef(jni, fileObject);
+      (*jni)->DeleteLocalRef(jni, activityClass);
+
+      (*app->activity->vm)->DetachCurrentThread(app->activity->vm);
+   }
+
+   char * argv[] = { "main", (char *)path };
+
+   {
+      char sdk_ver_str[92];
+      int len = __system_property_get("ro.build.version.sdk", sdk_ver_str);
+      if( len <= 0 ) 
+         android_sdk_version = 0;
+      else
+         android_sdk_version = atoi(sdk_ver_str);
+   }
+
+   gapp = app;
+   app->onAppCmd = handle_cmd;
+   app->onInputEvent = handle_input;
+   printf( "Starting with Android SDK Version: %d", android_sdk_version );
+
+   printf( "Starting Main\n" );
+   main( 1, argv );
+   printf( "Main Complete\n" );
 }
 
 void AndroidMakeFullscreen()
