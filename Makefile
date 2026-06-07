@@ -86,7 +86,7 @@ CFLAGS+=-Os -DANDROID -DAPPNAME=\"$(APPNAME)\"
 ifeq (ANDROID_FULLSCREEN,y)
 CFLAGS +=-DANDROID_FULLSCREEN
 endif
-CFLAGS+= -I$(RAWDRAWANDROID)/rawdraw -I$(NDK)/sysroot/usr/include -I$(NDK)/sysroot/usr/include/android -fPIC -I$(RAWDRAWANDROID) -DANDROIDVERSION=$(ANDROIDVERSION)
+CFLAGS+= -I$(RAWDRAWANDROID)/rawdraw -I$(NDK)/sysroot/usr/include -I$(NDK)/sysroot/usr/include/android -fPIC -I$(RAWDRAWANDROID) -DANDROIDVERSION=$(ANDROIDVERSION) -I /usr/lib/android-sdk/ndk/24.0.8215888/toolchains/llvm/prebuilt/linux-x86_64/sysroot/usr/include/android
 LDFLAGS += -lm -lGLESv3 -lEGL -landroid -llog
 LDFLAGS += -shared -uANativeActivity_onCreate
 
@@ -149,7 +149,7 @@ makecapk/lib/x86_64/lib$(APPNAME).so : $(ANDROIDSRCS)
 
 
 
-makecapk.apk : $(TARGETS) $(EXTRA_ASSETS_TRIGGER)
+_makecapk.apk : $(TARGETS) $(EXTRA_ASSETS_TRIGGER)
 	mkdir -p makecapk/assets
 	echo "Test asset file" > makecapk/assets/asset.txt
 	rm -rf temp.apk
@@ -157,12 +157,90 @@ makecapk.apk : $(TARGETS) $(EXTRA_ASSETS_TRIGGER)
 	unzip -o temp.apk -d makecapk
 	rm -rf makecapk.apk
 	cd makecapk && zip -D9r ../makecapk.apk .
-	jarsigner -sigalg SHA1withRSA -digestalg SHA1 -verbose -keystore $(KEYSTOREFILE) -storepass $(STOREPASS) makecapk.apk $(ALIASNAME)
+#	jarsigner -sigalg SHA1withRSA -digestalg SHA1 -verbose -keystore $(KEYSTOREFILE) -storepass $(STOREPASS) makecapk.apk $(ALIASNAME)
+	apksigner sign --ks my-release-key.keystore --ks-key-alias standkey --ks-pass pass:$(STOREPASS) makecapk.apk
 	rm -rf $(APKFILE)
 	$(BUILD_TOOLS)/zipalign -v 4 makecapk.apk $(APKFILE)
 	rm -rf temp.apk
 	rm -rf makecapk.apk
 	@ls -l $(APKFILE)
+
+__makecapk.apk : $(TARGETS) $(EXTRA_ASSETS_TRIGGER)
+	mkdir -p makecapk/assets
+	echo "Test asset file" > makecapk/assets/asset.txt
+	rm -rf temp.apk
+	$(AAPT) package -f -F temp.apk -I $(ANDROIDSDK)/platforms/android-$(ANDROIDVERSION)/android.jar -M AndroidManifest.xml -S Sources/res -A makecapk/assets -v --target-sdk-version $(ANDROIDTARGET)
+	unzip -o temp.apk -d makecapk
+	rm -rf makecapk.apk
+	cd makecapk && zip -D9r ../makecapk.apk .
+	rm -rf $(APKFILE)
+	$(BUILD_TOOLS)/zipalign -v 4 makecapk.apk $(APKFILE)
+	apksigner sign --ks $(KEYSTOREFILE) --ks-key-alias $(ALIASNAME) --ks-pass pass:$(STOREPASS) $(APKFILE)
+	rm -rf temp.apk
+	rm -rf makecapk.apk
+	@ls -l $(APKFILE)
+
+___makecapk.apk : $(TARGETS) $(EXTRA_ASSETS_TRIGGER)
+	mkdir -p makecapk/assets
+	echo "Test asset file" > makecapk/assets/asset.txt
+	rm -rf temp.apk
+	$(AAPT) package -f -F temp.apk -I $(ANDROIDSDK)/platforms/android-$(ANDROIDVERSION)/android.jar -M AndroidManifest.xml -S Sources/res -A makecapk/assets -v --target-sdk-version $(ANDROIDTARGET)
+	unzip -o temp.apk -d makecapk
+	rm -rf makecapk.apk
+	cd makecapk && zip -D9r ../makecapk.apk .
+	rm -rf $(APKFILE)
+	# Added -p flag for .arsc page alignment (API 30+ requirement)
+	$(BUILD_TOOLS)/zipalign -v -p 4 makecapk.apk $(APKFILE)
+	apksigner sign --ks $(KEYSTOREFILE) --ks-key-alias $(ALIASNAME) --ks-pass pass:$(STOREPASS) $(APKFILE)
+	rm -rf temp.apk
+	rm -rf makecapk.apk
+	@ls -l $(APKFILE)
+
+____makecapk.apk : $(TARGETS) $(EXTRA_ASSETS_TRIGGER)
+	mkdir -p makecapk/assets
+	echo "Test asset file" > makecapk/assets/asset.txt
+	rm -rf temp.apk
+	$(AAPT) package -f -F temp.apk -I $(ANDROIDSDK)/platforms/android-$(ANDROIDVERSION)/android.jar -M AndroidManifest.xml -S Sources/res -A makecapk/assets -v --target-sdk-version $(ANDROIDTARGET)
+	unzip -o temp.apk -d makecapk
+	rm -rf makecapk.apk
+	# 1. First, zip everything EXCEPT resources.arsc and .so files
+	cd makecapk && zip -D9r ../makecapk.apk . -x "resources.arsc" "*.so"
+	# 2. Now, add resources.arsc and .so files with ZERO compression (-0)
+	cd makecapk && zip -D0r ../makecapk.apk "resources.arsc" "*.so"
+	rm -rf $(APKFILE)
+	# 3. Align with page-alignment (-p)
+	$(BUILD_TOOLS)/zipalign -v -p 4 makecapk.apk $(APKFILE)
+	# 4. Sign the aligned APK
+	apksigner sign --ks $(KEYSTOREFILE) --ks-key-alias $(ALIASNAME) --ks-pass pass:$(STOREPASS) $(APKFILE)
+	rm -rf temp.apk
+	rm -rf makecapk.apk
+	@ls -l $(APKFILE)
+
+makecapk.apk : $(TARGETS) $(EXTRA_ASSETS_TRIGGER)
+	mkdir -p makecapk/assets
+	mkdir -p makecapk/lib/arm64-v8a
+	# Ensure the library is actually in the folder we are about to zip
+#	cp makecapk/lib/arm64-v8a/lib$(APPNAME).so makecapk/lib/arm64-v8a/lib$(APPNAME).so
+
+	rm -rf temp.apk
+	$(AAPT) package -f -F temp.apk -I $(ANDROIDSDK)/platforms/android-$(ANDROIDVERSION)/android.jar -M AndroidManifest.xml -S Sources/res -A makecapk/assets -v --target-sdk-version $(ANDROIDTARGET)
+
+	unzip -o temp.apk -d makecapk
+	rm -rf makecapk.apk
+
+	# PASS 1: Zip everything EXCEPT the big/special files
+	cd makecapk && zip -D9r ../makecapk.apk . -x "lib/*" "resources.arsc"
+
+	# PASS 2: Add the lib and resources with ZERO compression (-0)
+	# This is the "magic" that prevents the crash on Android 11+
+	cd makecapk && zip -D0r ../makecapk.apk "lib/arm64-v8a/lib$(APPNAME).so" "resources.arsc"
+
+	rm -rf $(APKFILE)
+	$(BUILD_TOOLS)/zipalign -v -p 4 makecapk.apk $(APKFILE)
+	apksigner sign --ks $(KEYSTOREFILE) --ks-key-alias $(ALIASNAME) --ks-pass pass:$(STOREPASS) $(APKFILE)
+
+	rm -rf temp.apk
+	rm -rf makecapk.apk
 
 
 uninstall : 
